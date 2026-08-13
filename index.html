@@ -1,6 +1,10 @@
 <meta charset="utf-8">
 <title>FORJA</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17130F">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   :root{
@@ -233,6 +237,8 @@
     Después registra tu primer peso abajo. Todo lo demás se calcula solo.
   </div>
 
+  <div class="bienvenida" id="avisoRecuperado" style="border-color:var(--brasa)"></div>
+
   <div class="hito num" id="hito"></div>
 
   <!-- EL MES PRIMERO (pedido DD: urgencia de días restantes + cierre pedido) -->
@@ -257,7 +263,7 @@
 
   <!-- HERO + METAS -->
   <section class="card">
-    <p class="tit">Estado <small>NORTE: 84 KG</small></p>
+    <p class="tit">Estado <small id="norteTag">NORTE</small></p>
     <div class="hero">
       <div class="kg num" id="kgActual">—<u>kg</u></div>
       <div class="lado">
@@ -266,7 +272,7 @@
       </div>
     </div>
     <div class="barra"><div class="fill" id="fill" style="width:0%"></div></div>
-    <div class="barra-l num"><span>94</span><span id="pct">0%</span><span>84</span></div>
+    <div class="barra-l num"><span id="barIni">94</span><span id="pct">0%</span><span id="barFin">84</span></div>
     <div class="metas">
       <div class="meta-row meta-mes-btn" id="metaAnioRow" title="Toca para editar">
         <span class="k" id="metaAnioK">AÑO</span><span class="v" id="metaAnio">—</span>
@@ -319,7 +325,7 @@
 
   <!-- GRÁFICA -->
   <section class="card">
-    <p class="tit">Camino a 84 <small id="chartMeta"></small></p>
+    <p class="tit"><span id="caminoTit">Camino a 84</span> <small id="chartMeta"></small></p>
     <div id="chart"></div>
   </section>
 
@@ -389,6 +395,7 @@
   <footer>
     <button class="btn2" id="btnExp">EXPORTAR DATOS</button>
     <button class="btn2" id="btnImp">IMPORTAR</button>
+    <input type="file" accept=".json,application/json,text/plain" id="impFile" hidden>
   </footer>
   <p class="nota" id="notaBackup">Los datos viven en este teléfono. Exporta y pégaselos a Forja para el análisis.</p>
   <p class="lema">Aparecer todos los días</p>
@@ -397,7 +404,8 @@
 <script>
 (function(){
 'use strict';
-var KEY='forja_v1';
+var KEY='forja_v1', SNAP_PRE='forja_snap_', SNAP_MAX=7, PREV_KEY='forja_prev';
+var recuperadoDe=null;
 var META_INICIO=94, META_FIN=84;
 var DEF_HABITOS=[
   {k:'s', label:'Dormido 10 pm'},
@@ -421,7 +429,16 @@ function ymStr(d){ d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth
 /* ---- estado + migración v1→v2 ---- */
 function cargar(){
   var d=null;
-  try{ var raw=localStorage.getItem(KEY); if(raw) d=JSON.parse(raw); }catch(e){}
+  try{ var raw=localStorage.getItem(KEY); if(raw) d=JSON.parse(raw); }
+  catch(e){ /* JSON roto: preservar la evidencia antes de tocar nada */
+    try{ localStorage.setItem('forja_corrupto', localStorage.getItem(KEY)); }catch(e2){}
+  }
+  /* RED DE SEGURIDAD: si el dato principal no está (o está roto) pero existe un
+     snapshot automático, se restaura solo — nunca más un lienzo en blanco. */
+  if(!d){
+    var s=ultimoSnap();
+    if(s){ try{ d=JSON.parse(localStorage.getItem(s)); recuperadoDe=s.slice(SNAP_PRE.length); }catch(e){} }
+  }
   var esNuevo=!d;
   if(!d) d={ weights:[], habits:{} };   /* instalación limpia: sin datos de nadie */
   if(!d.habitDefs) d.habitDefs=DEF_HABITOS.map(function(h){return {k:h.k,label:h.label}});
@@ -439,8 +456,33 @@ function cargar(){
   if(d.perfil.listo===undefined) d.perfil.listo=true;  /* instalaciones previas ya estaban configuradas */
   return d;
 }
-function guardar(){ try{ localStorage.setItem(KEY,JSON.stringify(st)); }catch(e){
+function guardar(){ try{ localStorage.setItem(KEY,JSON.stringify(st)); snapshot(); }catch(e){
   alert('No se pudo guardar (¿almacenamiento lleno? Prueba una foto más pequeña).'); } }
+/* Snapshot diario rotativo (últimos 7 días, sin la foto para no llenar el
+   almacenamiento): el seguro contra actualizaciones con errores. */
+function snapshot(){
+  try{
+    var lite={}; for(var k in st) if(k!=='photo') lite[k]=st[k];
+    localStorage.setItem(SNAP_PRE+hoyStr(), JSON.stringify(lite));
+    var snaps=[];
+    for(var i=0;i<localStorage.length;i++){
+      var kk=localStorage.key(i);
+      if(kk&&kk.indexOf(SNAP_PRE)===0) snaps.push(kk);
+    }
+    snaps.sort();
+    while(snaps.length>SNAP_MAX) localStorage.removeItem(snaps.shift());
+  }catch(e){}
+}
+function ultimoSnap(){
+  var best=null;
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k=localStorage.key(i);
+      if(k&&k.indexOf(SNAP_PRE)===0&&(!best||k>best)) best=k;
+    }
+  }catch(e){}
+  return best;
+}
 /* ¿el navegador guarda de verdad? En modo privado/incógnito no lo hace. */
 function storageOk(){
   try{
@@ -459,14 +501,31 @@ function storageOk(){
     var json=decodeURIComponent(escape(atob(decodeURIComponent(m[1]))));
     var d=JSON.parse(json);
     if(d.weights&&d.habits){
-      localStorage.setItem(KEY, JSON.stringify(d));
-      history.replaceState(null,'',location.pathname);
+      /* si el navegador YA tiene datos, no se pisan sin preguntar */
+      var prev=localStorage.getItem(KEY), tiene=false;
+      try{ var p=JSON.parse(prev); tiene=!!(p&&((p.weights&&p.weights.length)||Object.keys(p.habits||{}).length)); }catch(e2){}
+      if(tiene&&!confirm('Este link trae datos de respaldo. ¿Reemplazar los datos que ya hay en este navegador?')){
+        history.replaceState(null,'',location.pathname);
+      } else {
+        if(prev){ try{ localStorage.setItem(PREV_KEY, prev); }catch(e3){} } /* deshacer posible */
+        localStorage.setItem(KEY, JSON.stringify(d));
+        history.replaceState(null,'',location.pathname);
+      }
     }
   }catch(e){ /* link corrupto: se ignora y la app abre normal */ }
 })();
 
 var st=cargar();
 guardar();
+
+if(recuperadoDe){
+  var avR=document.getElementById('avisoRecuperado');
+  avR.style.display='block';
+  avR.innerHTML='<b>⚒ Datos recuperados.</b> El registro principal no estaba, así que restauré '+
+    'tu respaldo automático del <b>'+recuperadoDe+'</b>. La foto del norte no viaja en el '+
+    'respaldo — si falta, vuelve a ponerla. Toca este aviso para cerrarlo.';
+  avR.onclick=function(){ avR.style.display='none'; };
+}
 
 function pesos(){ return st.weights.slice().sort(function(x,y){return x.d<y.d?-1:1}); }
 function nHab(){ return st.habitDefs.length; }
@@ -515,6 +574,10 @@ function metaMesActual(){
 function render(){
   /* el perfil manda: la app sirve a cualquier persona con sus propios números */
   META_INICIO=st.perfil.ini; META_FIN=st.perfil.meta;
+  document.getElementById('norteTag').textContent='NORTE: '+META_FIN+' KG';
+  document.getElementById('barIni').textContent=META_INICIO;
+  document.getElementById('barFin').textContent=META_FIN;
+  document.getElementById('caminoTit').textContent='Camino a '+META_FIN;
   var hoy=hoyStr(), ahora=new Date();
   document.getElementById('fecha').textContent=ahora.toLocaleDateString('es-PE',{weekday:'short',day:'numeric',month:'short'});
 
@@ -603,7 +666,7 @@ function render(){
     var yUlt=t.a+t.m*dias(t.x0,t.ult);
     var dRest=(META_FIN-yUlt)/t.m;
     var fecha=new Date(t.ult.getTime()+dRest*864e5);
-    proy.innerHTML='<b>84 kg</b> ≈ <b>'+fecha.toLocaleDateString('es-PE',{day:'numeric',month:'long'})+'</b>';
+    proy.innerHTML='<b>'+META_FIN+' kg</b> ≈ <b>'+fecha.toLocaleDateString('es-PE',{day:'numeric',month:'long'})+'</b>';
   } else proy.innerHTML='Aún sin tendencia. <b>La semana manda.</b>';
 
   /* HITOS (Tally: milestones) — "por debajo de N" */
@@ -1047,7 +1110,7 @@ function fotoRender(){
       '<div class="overlay">ESTO ES LO QUE ESTAMOS FORJANDO</div>';
   } else {
     box.className='foto-box tiene';
-    box.innerHTML=NORTE_SVG+
+    box.innerHTML=NORTE_SVG.replace('>84<','>'+META_FIN+'<')+
       '<div class="overlay">LA ESTRUCTURA QUE FORJAMOS · toca CAMBIAR para tu foto real</div>';
   }
 }
@@ -1201,8 +1264,8 @@ function grafica(){
   for(var g=Math.ceil(yMin);g<=Math.floor(yMax);g+=2)
     s+='<line x1="'+L+'" y1="'+Y(g)+'" x2="'+(W-R)+'" y2="'+Y(g)+'" stroke="#2E2820" stroke-width="1"/>'+
        '<text x="'+(L-6)+'" y="'+(Y(g)+3.5)+'" fill="#94897C" font-size="9.5" text-anchor="end" font-family="Consolas,monospace">'+g+'</text>';
-  s+='<line x1="'+L+'" y1="'+Y(84)+'" x2="'+(W-R)+'" y2="'+Y(84)+'" stroke="#E8B84B" stroke-width="1.5" stroke-dasharray="5 4"/>'+
-     '<text x="'+(W-R)+'" y="'+(Y(84)-5)+'" fill="#E8B84B" font-size="10" text-anchor="end" font-weight="bold">META 84</text>';
+  s+='<line x1="'+L+'" y1="'+Y(META_FIN)+'" x2="'+(W-R)+'" y2="'+Y(META_FIN)+'" stroke="#E8B84B" stroke-width="1.5" stroke-dasharray="5 4"/>'+
+     '<text x="'+(W-R)+'" y="'+(Y(META_FIN)-5)+'" fill="#E8B84B" font-size="10" text-anchor="end" font-weight="bold">META '+META_FIN+'</text>';
   var mm=metaMesActual();
   if(mm!=null&&mm>META_FIN&&mm<yMax){
     var finMes=new Date(new Date().getFullYear(),new Date().getMonth()+1,0);
@@ -1328,7 +1391,7 @@ function avisoBackup(){
   if(d>=3){
     el.className='nota aviso-backup';
     el.innerHTML='⚠ <b>'+(st.backup?'Hace '+d+' días que no respaldas.':'Nunca has respaldado.')+
-      '</b> Toca EXPORTAR y guarda el texto en tus notas — si el navegador limpia la app, es lo único que la recupera.';
+      '</b> Toca EXPORTAR: descarga un archivo de respaldo — si este navegador limpia la app, ese archivo lo recupera TODO.';
   } else {
     el.className='nota';
     el.textContent='Respaldado hace '+d+' día'+(d===1?'':'s')+'. Los datos viven en este teléfono.';
@@ -1338,21 +1401,57 @@ function avisoBackup(){
 /* ---- EXPORT / IMPORT ---- */
 document.getElementById('btnExp').onclick=function(){
   var txt=JSON.stringify(st);
-  function ok(){ st.backup=hoyStr(); guardar(); avisoBackup();
-    alert('Datos copiados. Pégalos en tus notas del teléfono — ese es tu respaldo.'); }
+  var listo=function(){ st.backup=hoyStr(); guardar(); avisoBackup(); };
+  /* 1) archivo descargado: el respaldo que sobrevive aunque el navegador limpie todo */
+  var archivoOk=false;
+  try{
+    var blob=new Blob([txt],{type:'application/json'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='forja-'+hoyStr()+'.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); },3000);
+    archivoOk=true;
+  }catch(e){}
+  /* 2) portapapeles: para pegárselo a Forja en sesión de análisis */
+  function ok(){ listo();
+    alert((archivoOk?'Respaldo descargado (forja-'+hoyStr()+'.json) y datos copiados. ':'Datos copiados. ')+
+      'Guarda el archivo o pégalo en tus notas — recupera TODO con IMPORTAR.'); }
   if(navigator.clipboard&&navigator.clipboard.writeText)
-    navigator.clipboard.writeText(txt).then(ok,function(){ prompt('Copia manual:',txt); });
-  else prompt('Copia manual:',txt);
+    navigator.clipboard.writeText(txt).then(ok,function(){ prompt('Copia manual:',txt); listo(); });
+  else { prompt('Copia manual:',txt); listo(); }
 };
-document.getElementById('btnImp').onclick=function(){
-  var raw=prompt('Pega aquí tus datos exportados:'); if(!raw) return;
+function importarDatos(raw){
   try{ var d=JSON.parse(raw);
     if(!d.weights||!d.habits) throw 0;
+    /* lo que había queda en PREV_KEY: un import equivocado tiene deshacer */
+    var prev=localStorage.getItem(KEY);
+    if(prev){ try{ localStorage.setItem(PREV_KEY, prev); }catch(e2){} }
     localStorage.setItem(KEY,JSON.stringify(d));
     st=cargar(); guardar(); render();
+    alert('Datos importados ✓');
   }catch(e){ alert('Formato no válido.'); }
+}
+document.getElementById('btnImp').onclick=function(){
+  if(window.FileReader&&confirm('¿Importar desde un ARCHIVO de respaldo?\n(Cancelar = pegar el texto a mano)')){
+    document.getElementById('impFile').click();
+  } else {
+    var raw=prompt('Pega aquí tus datos exportados:'); if(!raw) return;
+    importarDatos(raw);
+  }
 };
+document.getElementById('impFile').addEventListener('change',function(ev){
+  var f=ev.target.files&&ev.target.files[0]; if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(){ importarDatos(rd.result); };
+  rd.readAsText(f);
+  ev.target.value='';
+});
 
 render();
+
+/* ---- PWA: instalable y con arranque offline cuando se sirve por http(s) ---- */
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol))
+  navigator.serviceWorker.register('sw.js').catch(function(){});
 })();
 </script>
