@@ -430,6 +430,21 @@ function cargar(){
 }
 function guardar(){ try{ localStorage.setItem(KEY,JSON.stringify(st)); }catch(e){
   alert('No se pudo guardar (¿almacenamiento lleno? Prueba una foto más pequeña).'); } }
+/* Restauración por link: .../#d=<base64 del JSON exportado>
+   Permite recuperar todo con un solo toque, sin copiar y pegar. */
+(function(){
+  var m=(location.hash||'').match(/[#&]d=([^&]+)/);
+  if(!m) return;
+  try{
+    var json=decodeURIComponent(escape(atob(decodeURIComponent(m[1]))));
+    var d=JSON.parse(json);
+    if(d.weights&&d.habits){
+      localStorage.setItem(KEY, JSON.stringify(d));
+      history.replaceState(null,'',location.pathname);
+    }
+  }catch(e){ /* link corrupto: se ignora y la app abre normal */ }
+})();
+
 var st=cargar();
 guardar();
 
