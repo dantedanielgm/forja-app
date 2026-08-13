@@ -41,6 +41,11 @@
   .mh-bar{height:9px; background:var(--hierro); margin-top:12px; overflow:hidden}
   .mh-bar .fill{height:100%; background:linear-gradient(90deg,#6E3A1A,var(--brasa)); transition:width .6s ease}
 
+  /* ALARMA de almacenamiento */
+  .alarma{display:none; background:#3A1410; border:2px solid #FF6B4A; color:#FFD9CF;
+    padding:13px 15px; font-size:13px; line-height:1.5}
+  .alarma b{color:#FF9A6B}
+
   /* BIENVENIDA (solo instalación nueva) */
   .bienvenida{display:none; background:#241A10; border:2px solid var(--chispa);
     color:var(--hueso); padding:13px 15px; font-size:13.5px; line-height:1.55; cursor:pointer}
@@ -215,6 +220,12 @@
     <h1>FORJA<i>.</i></h1>
     <div class="fecha" id="fecha"></div>
   </header>
+
+  <div class="alarma" id="alarmaStorage">
+    <b>⚠ Este navegador NO está guardando nada.</b><br>
+    Casi siempre es <b>modo privado / incógnito</b>. Sal de ese modo y vuelve a abrir la app,
+    o tus datos se van a borrar cada vez que la cierres.
+  </div>
 
   <div class="bienvenida" id="bienvenida">
     <b>Bienvenido a Forja</b><br>
@@ -430,6 +441,15 @@ function cargar(){
 }
 function guardar(){ try{ localStorage.setItem(KEY,JSON.stringify(st)); }catch(e){
   alert('No se pudo guardar (¿almacenamiento lleno? Prueba una foto más pequeña).'); } }
+/* ¿el navegador guarda de verdad? En modo privado/incógnito no lo hace. */
+function storageOk(){
+  try{
+    localStorage.setItem('__forja_test__','1');
+    var ok=localStorage.getItem('__forja_test__')==='1';
+    localStorage.removeItem('__forja_test__');
+    return ok;
+  }catch(e){ return false; }
+}
 /* Restauración por link: .../#d=<base64 del JSON exportado>
    Permite recuperar todo con un solo toque, sin copiar y pegar. */
 (function(){
@@ -686,6 +706,7 @@ document.getElementById('cargaCard').addEventListener('click',function(e){
 /* ---- PERFIL (los números que gobiernan toda la app) ---- */
 function perfilRender(){
   var p=st.perfil;
+  document.getElementById('alarmaStorage').style.display=storageOk()?'none':'block';
   document.getElementById('bienvenida').style.display=p.listo?'none':'block';
   document.getElementById('perfilBody').innerHTML=
     '<div class="mes-fila"><span class="mk">NOMBRE</span><span class="mv">'+
@@ -745,6 +766,25 @@ function medidas(){
   var g=navyPct(u.cin,u.cue,u.cad), gPrev=prev?navyPct(prev.cin,prev.cue,prev.cad):null;
   if(g!=null) html+='<br><span class="num">Grasa estimada (Navy): <b style="color:var(--chispa)">'+g.toFixed(1)+'%</b>'+
     (gPrev!=null?delta(g,gPrev):'')+'</span>';
+
+  /* MASA MAGRA: lo que de verdad define cómo te vas a ver.
+     El peso es el proxy; esto es la variable real. */
+  var w=pesos();
+  if(g!=null&&w.length){
+    var pesoAct=w[w.length-1].kg;
+    var magra=pesoAct*(1-g/100);
+    var magraPrev=null;
+    if(gPrev!=null){
+      var wp=w.filter(function(p){return p.d<=prev.d});
+      if(wp.length) magraPrev=wp[wp.length-1].kg*(1-gPrev/100);
+    }
+    var d15=magra/0.85, d12=magra/0.88;
+    html+='<br><span class="num">Masa magra: <b style="color:var(--chispa)">'+magra.toFixed(1)+' kg</b>'+
+      (magraPrev!=null?delta(magra,magraPrev):'')+'</span>'+
+      '<br><span style="font-size:12px;color:var(--ceniza)">Con esa masa magra, tu cuerpo objetivo pesa '+
+      '<b style="color:var(--brasa)">'+d15.toFixed(0)+'-'+d12.toFixed(0)+' kg</b> (al 15-12% de grasa). '+
+      'Si la masa magra sube, ese número sube contigo.</span>';
+  }
   html+='<br><span style="font-size:11px">'+ms.length+' registro'+(ms.length>1?'s':'')+' · último: '+fmt(pd(u.d))+'</span>';
   el.innerHTML=html;
 }
