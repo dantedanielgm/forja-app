@@ -32,8 +32,10 @@ El código no contiene datos de nadie: al abrirla por primera vez pide el perfil
    Un registro corrupto queda preservado en `forja_corrupto` como evidencia.
 3. **EXPORTAR** descarga un archivo `forja-<fecha>.json` (y copia el JSON al
    portapapeles). Ese archivo es el único respaldo que sobrevive si el navegador
-   borra todo el sitio — guardarlo fuera del teléfono. La app avisa si pasan
-   3+ días sin exportar.
+   borra todo el sitio. **ENVIAR ⤴** lo manda por WhatsApp/Drive/correo con la
+   hoja de compartir del sistema — el respaldo que sale del teléfono; el botón
+   solo aparece donde el navegador soporta compartir archivos. La app avisa si
+   pasan 3+ días sin respaldar.
 
 **Restauración por link:** `.../#d=<base64 del JSON exportado>` restaura todo
 con un solo toque. Si el navegador ya tiene datos, pide confirmación antes de

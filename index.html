@@ -394,6 +394,7 @@
 
   <footer>
     <button class="btn2" id="btnExp">EXPORTAR DATOS</button>
+    <button class="btn2" id="btnEnviar" style="display:none">ENVIAR ⤴</button>
     <button class="btn2" id="btnImp">IMPORTAR</button>
     <input type="file" accept=".json,application/json,text/plain" id="impFile" hidden>
   </footer>
@@ -1421,6 +1422,24 @@ document.getElementById('btnExp').onclick=function(){
     navigator.clipboard.writeText(txt).then(ok,function(){ prompt('Copia manual:',txt); listo(); });
   else { prompt('Copia manual:',txt); listo(); }
 };
+/* ENVIAR: el respaldo que SALE del teléfono (WhatsApp a ti mismo, Drive, correo).
+   Un archivo en la carpeta Descargas se pierde junto con el teléfono. */
+function archivoRespaldo(){
+  return new File([JSON.stringify(st)], 'forja-'+hoyStr()+'.json', {type:'application/json'});
+}
+(function(){
+  var btn=document.getElementById('btnEnviar');
+  var soporta=false;
+  try{ soporta=!!(navigator.share&&navigator.canShare&&navigator.canShare({files:[archivoRespaldo()]})); }catch(e){}
+  if(!soporta) return;                      /* en PC no aparece: no aplica */
+  btn.style.display='';
+  btn.onclick=function(){
+    navigator.share({files:[archivoRespaldo()], title:'Respaldo de Forja',
+      text:'Respaldo de Forja del '+hoyStr()+' — guárdalo, recupera todo con IMPORTAR.'})
+      .then(function(){ st.backup=hoyStr(); guardar(); avisoBackup(); })
+      .catch(function(){});                 /* si cancela el menú, no pasa nada */
+  };
+})();
 function importarDatos(raw){
   try{ var d=JSON.parse(raw);
     if(!d.weights||!d.habits) throw 0;
