@@ -208,6 +208,32 @@
   .c-off{border:1.5px solid var(--hierro)}
   .c-nada{background:var(--hierro); opacity:.45; width:5px; height:5px; margin:4px}
 
+  /* VEREDICTO DE RECOMPOSICIÓN — lo único que distingue adelgazar de recomponerse */
+  .veredicto{text-align:center; padding:13px 10px; border:2px solid var(--hierro); background:var(--carbon)}
+  .veredicto .vd{font-size:17px; font-weight:900; letter-spacing:2px}
+  .veredicto .vs{font-size:12px; color:var(--ceniza); margin-top:6px; line-height:1.5}
+  .v-recomp{border-color:var(--chispa); background:linear-gradient(90deg,#3A2410,#241A10)}
+  .v-recomp .vd{color:var(--chispa)}
+  .v-musculo{border-color:#FF9A6B} .v-musculo .vd{color:#FF9A6B}
+  .v-plano{border-color:var(--hierro)} .v-plano .vd{color:var(--ceniza)}
+  .v-sube{border-color:#FF6B4A} .v-sube .vd{color:#FF6B4A}
+  .ratio-big{font-size:34px; font-weight:700; color:var(--chispa); line-height:1}
+
+  /* FASE DE RUTINA */
+  .fase-row{display:flex; align-items:center; gap:12px}
+  .fase-num{font-size:40px; font-weight:700; color:var(--brasa); line-height:1; flex:none}
+  .fase-info{flex:1; font-size:13px; line-height:1.5}
+  .fase-info b{color:var(--brasa)}
+  .fase-info .ok{color:var(--chispa); font-weight:900}
+  .fase-banner{background:linear-gradient(90deg,#3A2410,#241A10); border:2px solid var(--chispa);
+    color:var(--chispa); font-weight:900; letter-spacing:1.5px; font-size:14px;
+    padding:11px 14px; text-align:center; display:none; line-height:1.5}
+  .med-aviso{background:#241A10; border:1px solid var(--chispa); color:var(--chispa);
+    font-size:12.5px; padding:9px 11px; margin-bottom:10px; line-height:1.45; display:none}
+  .tier-tag{font-size:9px; font-weight:900; letter-spacing:1px; padding:2px 5px;
+    background:var(--hierro); color:var(--ceniza); flex:none}
+  .t1-tag{background:#5A2A10; color:#FFB58A}
+
   footer{display:flex; gap:8px; justify-content:center; margin-top:4px}
   .btn2{background:none; border:1.5px solid var(--hierro); color:var(--ceniza);
     font-size:12px; font-weight:700; letter-spacing:1px; padding:8px 14px}
@@ -240,6 +266,7 @@
   <div class="bienvenida" id="avisoRecuperado" style="border-color:var(--brasa)"></div>
 
   <div class="hito num" id="hito"></div>
+  <div class="fase-banner" id="faseBanner"></div>
 
   <!-- EL MES PRIMERO (pedido DD: urgencia de días restantes + cierre pedido) -->
   <section class="card meta-mes-btn" id="mesHero" title="Toca para editar la meta del mes">
@@ -283,6 +310,9 @@
       <div class="meta-row">
         <span class="k">CAMINO</span><span class="v" id="proy">—</span>
       </div>
+      <div class="meta-row" id="recompRow" style="display:none">
+        <span class="k">RECOMP</span><span class="v" id="recompMini">—</span>
+      </div>
     </div>
   </section>
 
@@ -323,6 +353,17 @@
     <div id="cargaLista" class="rut-desc" style="margin-top:9px"></div>
   </section>
 
+  <!-- FASE DE RUTINA — el volumen crece con el hábito, no al revés -->
+  <section class="card">
+    <p class="tit">Fase de rutina <small id="faseTag"></small></p>
+    <div class="fase-row">
+      <div class="fase-num num" id="faseNum">0</div>
+      <div class="fase-info" id="faseInfo"></div>
+    </div>
+    <div class="mh-bar" style="margin-top:11px"><div class="fill" id="faseFill" style="width:0%"></div></div>
+    <div class="barra-l num"><span id="faseAct">—</span><span id="faseFalta"></span><span>fase 3</span></div>
+  </section>
+
   <!-- GRÁFICA -->
   <section class="card">
     <p class="tit"><span id="caminoTit">Camino a 84</span> <small id="chartMeta"></small></p>
@@ -331,14 +372,38 @@
 
   <!-- MEDIDAS (la cinta es más honesta que la balanza) -->
   <section class="card">
-    <p class="tit">Medidas <small>1 VEZ POR SEMANA · LUNES AM</small></p>
+    <p class="tit">Medidas <small>CINTURA SEMANAL · COMPLETA DÍA 1</small></p>
+    <div class="med-aviso" id="medAviso"></div>
     <div class="peso-row">
       <input id="cinInput" type="number" step="0.5" min="50" max="180" inputmode="decimal" placeholder="Cintura (cm)">
       <input id="cueInput" type="number" step="0.5" min="20" max="70" inputmode="decimal" placeholder="Cuello (cm)">
-      <input id="cadInput" type="number" step="0.5" min="60" max="180" inputmode="decimal" placeholder="Cadera (cm)" style="display:none">
       <button class="btn" id="btnMed">✓</button>
     </div>
+    <div class="peso-row" id="medExtra" style="display:none">
+      <input id="homInput" type="number" step="0.5" min="70" max="180" inputmode="decimal" placeholder="Hombros (cm)">
+      <input id="braInput" type="number" step="0.5" min="15" max="70" inputmode="decimal" placeholder="Brazo (cm)">
+      <input id="musInput" type="number" step="0.5" min="30" max="100" inputmode="decimal" placeholder="Muslo (cm)">
+      <input id="cadInput" type="number" step="0.5" min="60" max="180" inputmode="decimal" placeholder="Cadera (cm)" style="display:none">
+    </div>
+    <button class="btn2" id="btnMedMas" style="width:100%; margin-bottom:10px">+ MEDICIÓN COMPLETA</button>
     <div id="medBody" class="rut-desc">Cintura al ombligo (relajado) · cuello bajo la nuez.<br>Con ambas calculo tu % de grasa estimado.</div>
+  </section>
+
+  <!-- VEREDICTO DE RECOMPOSICIÓN — el marcador estrella -->
+  <section class="card" id="recompCard" style="display:none">
+    <p class="tit">Recomposición <small id="recompVs">VS HACE ~30 DÍAS</small></p>
+    <div class="veredicto" id="recompVer">
+      <div class="vd" id="recompTxt">—</div>
+      <div class="vs" id="recompSub"></div>
+    </div>
+    <div id="ratioBody" style="margin-top:12px"></div>
+  </section>
+
+  <!-- LAS DOS QUE DEBEN SUBIR -->
+  <section class="card" id="curvasCard" style="display:none">
+    <p class="tit">Las dos que deben subir <small>MIENTRAS EL PESO BAJA</small></p>
+    <div id="curvaMagra"></div>
+    <div id="curvaRatio" style="margin-top:10px"></div>
   </section>
 
   <!-- MOSAICO -->
@@ -452,6 +517,7 @@ function cargar(){
   if(!d.medidas) d.medidas=[];
   if(!d.ejerc) d.ejerc={};                      /* {fecha: [nombres de ejercicios hechos]} */
   if(!d.carga) d.carga={meta:1, objetivo:20};    /* empieza en 1: el primer escalón debe ser ridículo */
+  if(d.carga.faseVista==null) d.carga.faseVista=null;  /* se fija en el primer render */
   if(!d.perfil) d.perfil={nombre:'', sexo:'H', h:170, ini:90, meta:80, listo:!esNuevo};
   if(!d.perfil.sexo) d.perfil.sexo='H';
   if(d.perfil.listo===undefined) d.perfil.listo=true;  /* instalaciones previas ya estaban configuradas */
@@ -685,7 +751,7 @@ function render(){
     }
   }
 
-  fotoRender(); chipsRender(reg); rutina(); carga(); medidas(); grafica(); mosaico(); semana(); cierreMes(); renderMes(); perfilRender(); avisoBackup();
+  fotoRender(); chipsRender(reg); rutina(); carga(); faseRender(); medidas(); grafica(); mosaico(); semana(); cierreMes(); renderMes(); perfilRender(); avisoBackup();
 }
 
 /* ---- CARGA SEMANAL ----
@@ -812,60 +878,232 @@ function navyPct(cin,cue,cad){
   }
   return (p>2&&p<70)?p:null;
 }
+/* RATIO V = hombros ÷ cintura. El marcador estético puro: no cambia si solo
+   pierdes agua, y sube tanto si la cintura baja como si los hombros crecen. */
+function ratioV(m){ return (m&&m.hom&&m.cin)?m.hom/m.cin:null; }
+/* peso vigente en una fecha (el último registrado hasta ese día) */
+function pesoEn(fecha){
+  var w=pesos().filter(function(p){return p.d<=fecha});
+  return w.length?w[w.length-1].kg:null;
+}
+function magraDe(m){
+  var g=navyPct(m.cin,m.cue,m.cad), p=pesoEn(m.d);
+  return (g!=null&&p!=null)?p*(1-g/100):null;
+}
+function medsOrd(){ return st.medidas.slice().sort(function(x,y){return x.d<y.d?-1:1}); }
+/* ¿ya hay medición completa (con hombros) este mes? */
+function faltaCompleta(){
+  var ym=ymStr();
+  return !medsOrd().some(function(m){ return m.d.slice(0,7)===ym && m.hom; });
+}
 function medidas(){
   var el=document.getElementById('medBody'), esM=st.perfil.sexo==='M';
   document.getElementById('cadInput').style.display=esM?'':'none';
-  var ms=st.medidas.slice().sort(function(x,y){return x.d<y.d?-1:1});
+  var ms=medsOrd();
+  /* AVISOS (E): día 1 = medición completa + foto · lunes = peso + cintura */
+  var ahora=new Date(), av=document.getElementById('medAviso'), hoy=hoyStr();
+  var yaHoy=ms.some(function(m){return m.d===hoy});
+  if(faltaCompleta()&&ahora.getDate()<=5){
+    av.style.display='block';
+    av.innerHTML='📸 <b>Mes nuevo:</b> toca la medición completa (hombros · brazo · muslo) '+
+      'y la <b>foto de perfil</b>, de pie relajado, misma pared. La cabeza adelante no se juzga en el espejo.';
+  } else if(ahora.getDay()===1&&!yaHoy){
+    av.style.display='block';
+    av.innerHTML='📏 <b>Lunes:</b> toca peso + cintura, al despertar y después del baño.';
+  } else av.style.display='none';
+
   if(!ms.length){
     el.innerHTML='Cintura al ombligo (relajado) · cuello bajo la nuez'+
-      (esM?' · cadera en la parte más ancha':'')+'.<br>Con eso calculo tu % de grasa estimado.';
+      (esM?' · cadera en la parte más ancha':'')+'.<br>Con eso calculo tu % de grasa estimado. '+
+      'El <b style="color:var(--chispa)">día 1 de cada mes</b> agrega hombros, brazo y muslo: ahí nace el RATIO V.';
+    document.getElementById('recompCard').style.display='none';
+    document.getElementById('recompRow').style.display='none';
+    document.getElementById('curvasCard').style.display='none';
     return;
   }
   var u=ms[ms.length-1], prev=ms.length>1?ms[ms.length-2]:null;
-  function delta(a,b){ if(b==null||a==null) return '';
-    var d=a-b; return ' <span style="color:'+(d<0?'var(--chispa)':'#FF9A6B')+'">('+(d<=0?'':'+')+d.toFixed(1)+')</span>'; }
-  var html='<span class="num">Cintura: <b style="color:var(--brasa)">'+u.cin.toFixed(1)+'</b> cm'+delta(u.cin,prev&&prev.cin)+
-    ' · Cuello: <b style="color:var(--brasa)">'+u.cue.toFixed(1)+'</b> cm'+delta(u.cue,prev&&prev.cue)+
-    (u.cad?' · Cadera: <b style="color:var(--brasa)">'+u.cad.toFixed(1)+'</b> cm'+delta(u.cad,prev&&prev.cad):'')+'</span>';
+  /* en las medidas, bajar es bueno en cintura y subir es bueno en músculo */
+  function delta(a,b,subeBien){ if(b==null||a==null) return '';
+    var d=a-b, bueno=subeBien?d>0:d<0;
+    if(Math.abs(d)<0.05) return ' <span style="color:var(--ceniza)">(=)</span>';
+    return ' <span style="color:'+(bueno?'var(--chispa)':'#FF9A6B')+'">('+(d<=0?'':'+')+d.toFixed(1)+')</span>'; }
+  function linea(k,v,unid,d,subeBien){
+    return '<br><span class="num">'+k+': <b style="color:var(--brasa)">'+v.toFixed(1)+'</b> '+unid+
+      delta(v,d,subeBien)+'</span>'; }
+
+  var html='<span class="num">Cintura: <b style="color:var(--brasa)">'+u.cin.toFixed(1)+'</b> cm'+delta(u.cin,prev&&prev.cin,false)+
+    ' · Cuello: <b style="color:var(--brasa)">'+u.cue.toFixed(1)+'</b> cm'+delta(u.cue,prev&&prev.cue,true)+
+    (u.cad?' · Cadera: <b style="color:var(--brasa)">'+u.cad.toFixed(1)+'</b> cm'+delta(u.cad,prev&&prev.cad,false):'')+'</span>';
+  /* los tres de la medición completa: crecer aquí es ganar */
+  if(u.hom!=null) html+=linea('Hombros',u.hom,'cm',prev&&prev.hom,true);
+  if(u.bra!=null) html+=linea('Brazo',u.bra,'cm',prev&&prev.bra,true);
+  if(u.mus!=null) html+=linea('Muslo',u.mus,'cm',prev&&prev.mus,true);
+
   var g=navyPct(u.cin,u.cue,u.cad), gPrev=prev?navyPct(prev.cin,prev.cue,prev.cad):null;
   if(g!=null) html+='<br><span class="num">Grasa estimada (Navy): <b style="color:var(--chispa)">'+g.toFixed(1)+'%</b>'+
-    (gPrev!=null?delta(g,gPrev):'')+'</span>';
+    delta(g,gPrev,false)+'</span>';
 
   /* MASA MAGRA: lo que de verdad define cómo te vas a ver.
      El peso es el proxy; esto es la variable real. */
   var w=pesos();
   if(g!=null&&w.length){
-    var pesoAct=w[w.length-1].kg;
-    var magra=pesoAct*(1-g/100);
-    var magraPrev=null;
-    if(gPrev!=null){
-      var wp=w.filter(function(p){return p.d<=prev.d});
-      if(wp.length) magraPrev=wp[wp.length-1].kg*(1-gPrev/100);
-    }
+    var magra=magraDe(u), magraPrev=prev?magraDe(prev):null;
     var d15=magra/0.85, d12=magra/0.88;
     html+='<br><span class="num">Masa magra: <b style="color:var(--chispa)">'+magra.toFixed(1)+' kg</b>'+
-      (magraPrev!=null?delta(magra,magraPrev):'')+'</span>'+
+      delta(magra,magraPrev,true)+'</span>'+
       '<br><span style="font-size:12px;color:var(--ceniza)">Con esa masa magra, tu cuerpo objetivo pesa '+
       '<b style="color:var(--brasa)">'+d15.toFixed(0)+'-'+d12.toFixed(0)+' kg</b> (al 15-12% de grasa). '+
       'Si la masa magra sube, ese número sube contigo.</span>';
   }
-  html+='<br><span style="font-size:11px">'+ms.length+' registro'+(ms.length>1?'s':'')+' · último: '+fmt(pd(u.d))+'</span>';
+  html+='<br><span style="font-size:11px">'+ms.length+' registro'+(ms.length>1?'s':'')+' · último: '+fmt(pd(u.d))+
+    (faltaCompleta()?' · <b style="color:var(--chispa)">falta la completa de este mes</b>':'')+'</span>';
   el.innerHTML=html;
+  recomposicion(ms);
+  curvas(ms);
 }
+
+/* ---- VEREDICTO DE RECOMPOSICIÓN ----
+   Cintura que baja mientras la masa magra aguanta = estás cambiando de
+   composición, no solo vaciándote. Es lo único que distingue adelgazar
+   de recomponerse, y no se ve en la balanza. */
+function recomposicion(ms){
+  var card=document.getElementById('recompCard'), row=document.getElementById('recompRow');
+  var u=ms[ms.length-1];
+  /* referencia: el registro más cercano a 30 días atrás (mínimo 20 para que valga) */
+  var ref=null, mejor=1e9;
+  for(var i=0;i<ms.length-1;i++){
+    var dd=dias(pd(ms[i].d),pd(u.d));
+    if(dd>=20&&Math.abs(dd-30)<mejor){ mejor=Math.abs(dd-30); ref=ms[i]; }
+  }
+  /* RATIO V se muestra aunque no haya referencia todavía */
+  var rv=ratioV(u), rvRef=ref?ratioV(ref):null;
+  var rb=document.getElementById('ratioBody');
+  if(rv!=null){
+    var dRv=rvRef!=null?rv-rvRef:null;
+    rb.innerHTML='<div class="mh-row"><div>'+
+      '<div class="ratio-big num">'+rv.toFixed(3)+'</div>'+
+      '<div class="mh-sub">RATIO V · HOMBROS ÷ CINTURA</div></div>'+
+      '<div class="mh-info" style="font-size:12.5px">'+
+      (dRv!=null?'vs hace '+dias(pd(ref.d),pd(u.d))+' d: <b class="'+(dRv>=0?'ok':'')+'">'+
+        (dRv>=0?'+':'')+dRv.toFixed(3)+'</b><br>':'')+
+      '<span style="color:var(--ceniza)">referencia estética<br>clásica: <b>1.6</b></span></div></div>';
+  } else rb.innerHTML='<span style="color:var(--ceniza);font-size:12.5px">Agrega <b>hombros</b> en la '+
+    'medición completa y aparece tu <b>RATIO V</b> — el marcador de la silueta en V.</span>';
+
+  if(!ref){
+    card.style.display=rv!=null?'block':'none';
+    row.style.display='none';
+    document.getElementById('recompVer').className='veredicto v-plano';
+    document.getElementById('recompTxt').textContent='AÚN SIN COMPARACIÓN';
+    document.getElementById('recompSub').innerHTML='El veredicto necesita dos mediciones separadas por '+
+      '<b>~30 días</b>. Vuelve el día 1 del próximo mes.';
+    document.getElementById('recompVs').textContent='FALTA REFERENCIA';
+    return;
+  }
+
+  var dCin=u.cin-ref.cin;
+  var mU=magraDe(u), mR=magraDe(ref), dMag=(mU!=null&&mR!=null)?mU-mR:null;
+  var ndias=dias(pd(ref.d),pd(u.d));
+  var cls,txt,sub,mini;
+  if(dCin>=0.5){
+    cls='v-sube'; txt='LA CINTURA SUBIÓ';
+    sub='+'+dCin.toFixed(1)+' cm en '+ndias+' días. Revisa el finde y el sueño antes que la comida.';
+    mini='<b style="color:#FF6B4A">cintura +'+dCin.toFixed(1)+' cm</b>';
+  } else if(dCin>-0.5){
+    cls='v-plano'; txt='SIN CAMBIOS';
+    sub='La cintura se movió '+dCin.toFixed(1)+' cm en '+ndias+' días — dentro del ruido de la cinta.';
+    mini='<span style="color:var(--ceniza)">cintura plana ('+ndias+' d)</span>';
+  } else if(dMag!=null&&dMag<=-1){
+    cls='v-musculo'; txt='PERDIENDO MÚSCULO';
+    sub='Cintura '+dCin.toFixed(1)+' cm ✓ pero la masa magra cayó <b>'+Math.abs(dMag).toFixed(1)+' kg</b>. '+
+      'Sube la proteína y no recortes más comida: el déficit ya está mordiendo el músculo.';
+    mini='<b style="color:#FF9A6B">magra −'+Math.abs(dMag).toFixed(1)+' kg</b> — sube proteína';
+  } else {
+    cls='v-recomp'; txt='RECOMPONIENDO ✓';
+    sub='Cintura <b>'+dCin.toFixed(1)+' cm</b> en '+ndias+' días'+
+      (dMag!=null?' con la masa magra '+(dMag>=0?'<b>subiendo '+dMag.toFixed(1)+' kg</b>':'intacta ('+dMag.toFixed(1)+' kg)'):'')+
+      '. Esto es exactamente lo que la balanza no te puede decir.';
+    mini='<span class="ok">RECOMPONIENDO ✓</span> cintura '+dCin.toFixed(1)+' cm';
+  }
+  card.style.display='block';
+  document.getElementById('recompVer').className='veredicto '+cls;
+  document.getElementById('recompTxt').textContent=txt;
+  document.getElementById('recompSub').innerHTML=sub;
+  document.getElementById('recompVs').textContent='VS HACE '+ndias+' DÍAS';
+  row.style.display='';
+  document.getElementById('recompMini').innerHTML=mini;
+}
+
+/* ---- LAS DOS CURVAS QUE DEBEN SUBIR ----
+   El peso baja; magra y ratio V deben aguantar o subir. Las tres juntas
+   cuentan la historia completa que ninguna cuenta sola. */
+function miniCurva(titulo, puntos, color, dec){
+  if(puntos.length<2) return '';
+  var W=360,H=86,L=34,R=8,T=14,B=16;
+  var xs=puntos.map(function(p){return pd(p.d)}), ys=puntos.map(function(p){return p.v});
+  var x0=xs[0], spanX=Math.max(1,dias(x0,xs[xs.length-1]));
+  var yMin=Math.min.apply(null,ys), yMax=Math.max.apply(null,ys);
+  var pad=Math.max((yMax-yMin)*0.25,dec===3?0.02:0.4);
+  yMin-=pad; yMax+=pad;
+  function X(d){ return L+(dias(x0,d)/spanX)*(W-L-R); }
+  function Y(v){ return T+(1-(v-yMin)/(yMax-yMin))*(H-T-B); }
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+titulo+'">';
+  s+='<text x="0" y="9" fill="#94897C" font-size="9" letter-spacing="1.5" font-weight="bold">'+titulo+'</text>';
+  var pts=puntos.map(function(p,i){return X(xs[i])+','+Y(p.v)}).join(' ');
+  s+='<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="2.5" stroke-linejoin="round"/>';
+  puntos.forEach(function(p,i){
+    var last=i===puntos.length-1;
+    s+='<circle cx="'+X(xs[i])+'" cy="'+Y(p.v)+'" r="'+(last?4.5:2.5)+'" fill="'+color+'"/>';
+  });
+  var prim=puntos[0].v, ult=puntos[puntos.length-1].v, sub=ult>=prim;
+  s+='<text x="'+(L-5)+'" y="'+(Y(ys[0])+3.5)+'" fill="#94897C" font-size="9" text-anchor="end" font-family="Consolas,monospace">'+prim.toFixed(dec)+'</text>';
+  s+='<text x="'+(W-R)+'" y="'+(Y(ult)-8)+'" fill="'+color+'" font-size="11" text-anchor="end" font-weight="bold" font-family="Consolas,monospace">'+
+     ult.toFixed(dec)+' '+(sub?'▲':'▼')+'</text>';
+  s+='</svg>';
+  return s;
+}
+function curvas(ms){
+  var card=document.getElementById('curvasCard');
+  var pMag=[], pRv=[];
+  ms.forEach(function(m){
+    var g=magraDe(m); if(g!=null) pMag.push({d:m.d,v:g});
+    var r=ratioV(m);  if(r!=null) pRv.push({d:m.d,v:r});
+  });
+  var a=miniCurva('MASA MAGRA (kg)',pMag,'#E8B84B',1);
+  var b=miniCurva('RATIO V (hombros ÷ cintura)',pRv,'#EE6C2B',3);
+  document.getElementById('curvaMagra').innerHTML=a;
+  document.getElementById('curvaRatio').innerHTML=b;
+  card.style.display=(a||b)?'block':'none';
+}
+/* la fila extra se abre sola cuando toca la completa del mes */
+function medExtraVisible(v){
+  document.getElementById('medExtra').style.display=v?'':'none';
+  document.getElementById('btnMedMas').textContent=v?'– SOLO CINTURA Y CUELLO':'+ MEDICIÓN COMPLETA';
+}
+document.getElementById('btnMedMas').onclick=function(){
+  medExtraVisible(document.getElementById('medExtra').style.display==='none');
+};
 document.getElementById('btnMed').onclick=function(){
-  var cin=parseFloat(document.getElementById('cinInput').value);
-  var cue=parseFloat(document.getElementById('cueInput').value);
-  var cad=parseFloat(document.getElementById('cadInput').value);
+  function val(id){ var v=parseFloat(document.getElementById(id).value); return isNaN(v)?null:v; }
+  var cin=val('cinInput'), cue=val('cueInput'), cad=val('cadInput');
+  var hom=val('homInput'), bra=val('braInput'), mus=val('musInput');
   if(!cin||!cue||cin<50||cin>180||cue<20||cue>70){ alert('Cintura 50-180 · Cuello 20-70 (cm)'); return; }
   if(st.perfil.sexo==='M'&&(!cad||cad<60||cad>180)){ alert('Falta la cadera (60-180 cm) — la fórmula de mujer la necesita'); return; }
+  if(hom!=null&&(hom<70||hom>180)){ alert('Hombros 70-180 cm'); return; }
+  if(bra!=null&&(bra<15||bra>70)){ alert('Brazo 15-70 cm'); return; }
+  if(mus!=null&&(mus<30||mus>100)){ alert('Muslo 30-100 cm'); return; }
   var hoy=hoyStr(), reg={d:hoy,cin:cin,cue:cue};
   if(cad) reg.cad=cad;
+  if(hom!=null) reg.hom=hom;
+  if(bra!=null) reg.bra=bra;
+  if(mus!=null) reg.mus=mus;
   st.medidas=st.medidas.filter(function(x){return x.d!==hoy});
   st.medidas.push(reg);
   guardar();
-  document.getElementById('cinInput').value=''; document.getElementById('cueInput').value='';
-  document.getElementById('cadInput').value='';
-  medidas();
+  ['cinInput','cueInput','cadInput','homInput','braInput','musInput'].forEach(function(id){
+    document.getElementById(id).value=''; });
+  medExtraVisible(false);
+  render();
 };
 
 /* ---- ENTRENO DE HOY (la rutina vive en la app: cero decisiones) ---- */
@@ -881,27 +1119,51 @@ var V={ /* videos: cortos y directos al movimiento */
   rumano:'https://www.youtube.com/shorts/8tm3JW1UpAs',
   lateral:'https://www.youtube.com/@JeffNippard/shorts'
 };
-var RUTINAS={
-  2:{t:'GYM 6:00-6:45 · ESPALDA Y POSTURA',e:[
-    ['Rampa: caminadora + extensión torácica ×10 + series al 50%','10 min',V.torax],
+/* TIERS DE PRIORIDAD — si hay que recortar, se recorta de abajo.
+   T1 es innegociable: jalón/remo/face pull arreglan la postura Y construyen
+   la V. El press de pecho está PAUSADO: a alguien encorvado 12h/día el
+   trabajo de pecho le refuerza la curva. */
+var TIERS={
+  1:{nom:'ESPALDA Y POSTURA',ej:[
     ['Jalón al pecho <span class="star">★ anchura</span>','3×10',V.jalon],
     ['Remo con apoyo en pecho (o sentado) <span class="star">★ postura</span>','3×10',V.remo],
-    ['Face pull <span class="star">★ anti-joroba</span>','3×15',V.face],
-    ['Chin tucks','3×10',V.chin],['Plancha','3×30s',V.plancha],
-    ['Whey al volver, antes de la ducha','1 scoop']]},
-  4:{t:'GYM 6:00-6:45 · PIERNAS, GLÚTEOS Y HOMBROS',e:[
-    ['Rampa: caminadora + extensión torácica ×10 + series al 50%','10 min',V.torax],
-    ['Prensa de piernas (pies altos)','3×10',V.prensa],
+    ['Face pull <span class="star">★ anti-joroba</span>','3×15',V.face]]},
+  2:{nom:'PIERNAS Y GLÚTEOS',ej:[
     ['Puente de glúteos con peso','3×12',V.gluteo],
     ['Peso muerto rumano ligero <span class="star">★ espalda baja</span>','3×10',V.rumano],
+    ['Prensa de piernas (pies altos)','3×10',V.prensa]]},
+  3:{nom:'HOMBROS Y CORE',ej:[
     ['Elevaciones laterales <span class="star">★ hombros</span>','3×12',V.lateral],
-    ['Remo con apoyo en pecho (o sentado)','3×12',V.remo],
-    ['Whey al volver, antes de la ducha','1 scoop']]},
-  6:{t:'CASA · CIRCUITO · 25 MIN (donde estés)',e:[
-    ['Sentadillas al aire','3×10'],['Remo con mochila','3×10 c/u'],
-    ['Puente de glúteos','3×12',V.gluteo],['Chin tucks','3×10',V.chin],
-    ['Plancha','3×20s',V.plancha]]}
+    ['Plancha','3×30s',V.plancha],
+    ['Chin tucks','3×10',V.chin]]}
 };
+var RAMPA=['Rampa: caminadora + extensión torácica ×10 + series al 50%','10 min',V.torax];
+var WHEY =['Whey al volver, antes de la ducha','1 scoop'];
+
+/* FASES — el volumen crece cuando el hábito ya aguanta, no antes.
+   La fase la manda carga.meta (el marcador que él mismo diseñó). */
+function faseDe(meta){ return meta>=20?3:meta>=12?2:meta>=6?1:0; }
+var FASES=[
+  {dias:[],        ses:1, nom:'ARRANQUE',    req:'—',  sig:6,
+   desc:'Sin días fijos. <b>Cualquier ejercicio suma</b>, el que sea, el día que sea.'},
+  {dias:[2,4],     ses:2, nom:'DOS SESIONES', req:'6', sig:12,
+   desc:'Mar y jue: <b>Tier 1 completo + 1 de Tier 2</b> (4 por sesión).'},
+  {dias:[2,4,6],   ses:3, nom:'TRES SESIONES',req:'12',sig:20,
+   desc:'Mar, jue y sáb: <b>Tier 1 + 1 de Tier 2 + 1 de Tier 3</b> (5 por sesión).'},
+  {dias:[1,2,4,6], ses:4, nom:'CUATRO SESIONES',req:'20',sig:null,
+   desc:'Lun, mar, jue y sáb alternando A/B: <b>cada grupo 2× por semana</b>.'}
+];
+/* qué ejercicios toca hoy, según fase y qué número de sesión de la semana es */
+function sesionDe(fase,idx){
+  var T1=TIERS[1].ej, T2=TIERS[2].ej, T3=TIERS[3].ej;
+  if(fase===1) return T1.concat([T2[idx%3]]);
+  if(fase===2) return T1.concat([T2[idx%3],T3[idx%3]]);
+  if(fase===3) return (idx%2===0)
+    ? T1.concat([T2[0],T2[1]])          /* A: espalda + piernas */
+    : T3.concat([T2[2],T1[0]]);         /* B: hombros/core + prensa + jalón */
+  return T1.concat(T2,T3);              /* fase 0: el pool entero */
+}
+function poolCompleto(){ return TIERS[1].ej.concat(TIERS[2].ej,TIERS[3].ej); }
 var DIA_NOM=['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
 function filasEjerc(lista, nota){
   var hechosHoy=st.ejerc[hoyStr()]||[];
@@ -917,24 +1179,55 @@ function filasEjerc(lista, nota){
   return html;
 }
 function rutina(){
-  var d=new Date().getDay(), r=RUTINAS[d];
+  var d=new Date().getDay(), f=faseDe(st.carga.meta), F=FASES[f];
   var tag=document.getElementById('rutTag'), body=document.getElementById('rutBody');
-  var lista, nota;
-  if(r){
-    tag.textContent=r.t;
-    lista=r.e;
+  var lista, nota, idx=F.dias.indexOf(d);
+  if(f===0){
+    tag.textContent='FASE 0 · LIBRE — CUALQUIERA SUMA';
+    lista=poolCompleto();
+    nota='Elige el que quieras y llévalo cerca del fallo. <b style="color:var(--chispa)">Uno solo ya cuenta.</b>';
+  } else if(idx>=0){
+    var esCasa=(d===6);
+    tag.textContent=(esCasa?'CASA · ':'GYM 6:00-6:45 · ')+'SESIÓN '+(idx+1)+'/'+F.ses;
+    lista=[RAMPA].concat(sesionDe(f,idx),[WHEY]);
     nota='llévalo cerca del fallo · el peso da igual · marca ✓ cada uno que hagas';
   } else {
     var prox=null;
-    for(var i=1;i<=7;i++){ var dd=(d+i)%7; if(RUTINAS[dd]){ prox=dd; break; } }
+    for(var i=1;i<=7;i++){ if(F.dias.indexOf((d+i)%7)>=0){ prox=(d+i)%7; break; } }
     tag.textContent='LIBRE · próximo: '+DIA_NOM[prox];
-    lista=RUTINAS[6].e;   /* cualquiera de estos suma — se puede en casa */
+    lista=poolCompleto();
     nota='Hoy no toca, pero <b style="color:var(--chispa)">cualquiera que hagas SUMA</b> a tu semana';
   }
-  body.innerHTML=filasEjerc(lista, nota);
+  body.innerHTML=filasEjerc(lista, nota)+
+    '<div class="rut-desc" style="font-size:11.5px; margin-top:8px; border-top:1px solid var(--hierro); padding-top:7px">'+
+    '⏸ <b>Press de pecho en pausa</b> hasta que la postura esté corregida (mes 3-4). '+
+    'La V la construyen dorsales y hombros, no el pecho.</div>';
   [].slice.call(body.querySelectorAll('.rut-chk')).forEach(function(b){
     b.onclick=function(){ tocaEjerc(limpiaNom(lista[+b.dataset.ej][0])); };
   });
+}
+
+/* ---- FASE: dónde estás y qué falta para la siguiente ---- */
+function faseRender(){
+  var meta=st.carga.meta, f=faseDe(meta), F=FASES[f];
+  document.getElementById('faseNum').textContent=f;
+  document.getElementById('faseTag').textContent=F.nom;
+  var sigTxt=F.sig!=null
+    ? 'Para <b>FASE '+(f+1)+'</b> te faltan <b>'+(F.sig-meta)+'</b> de meta semanal (necesitas '+F.sig+').'
+    : '<span class="ok">FASE MÁXIMA ⚒</span> El cuerpo soñado corre a este volumen.';
+  document.getElementById('faseInfo').innerHTML=F.desc+'<br><span style="color:var(--ceniza)">'+sigTxt+'</span>';
+  document.getElementById('faseFill').style.width=Math.round(Math.min(1,meta/20)*100)+'%';
+  document.getElementById('faseAct').textContent='fase '+f+' · meta '+meta;
+  document.getElementById('faseFalta').textContent=F.sig!=null?('siguiente a los '+F.sig):'tope';
+  /* banner al subir de fase: es un hito real, no un número que cambia */
+  if(st.carga.faseVista==null){ st.carga.faseVista=f; guardar(); }  /* persistir: si no, el banner se pierde al cerrar */
+  if(f>st.carga.faseVista){
+    var b=document.getElementById('faseBanner');
+    b.style.display='block';
+    b.innerHTML='⚒ SUBISTE A FASE '+f+' — '+F.nom+'<br>'+
+      '<span style="font-weight:400;font-size:12.5px">'+F.desc.replace(/<[^>]*>/g,'')+' Toca para cerrar.</span>';
+    b.onclick=function(){ st.carga.faseVista=f; guardar(); b.style.display='none'; };
+  }
 }
 
 /* ---- NAVEGADOR DE MESES (Tally: ‹ › temporal + totales del calendario) ---- */
@@ -1345,7 +1638,7 @@ function semana(){
   var lunes=new Date(hoy); var dw=(hoy.getDay()+6)%7; lunes.setDate(hoy.getDate()-dw);
   var e=0; for(var k=0;k<7;k++){ var f2=new Date(lunes.getTime()+k*864e5);
     if(f2<=hoy){ var r2=st.habits[hoyStr(f2)]; if(r2&&r2.e) e++; } }
-  document.getElementById('entrenos').textContent=e+'/3';
+  document.getElementById('entrenos').textContent=e+'/'+FASES[faseDe(st.carga.meta)].ses;
 
   /* 👻 ghost semanal (Tally: correr contra tu referencia) */
   var ptsSem=function(lun){

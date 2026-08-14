@@ -17,8 +17,17 @@ El código no contiene datos de nadie: al abrirla por primera vez pide el perfil
 - **Carga semanal:** el marcador del entrenamiento — arranca en 1 ejercicio por
   semana y sube solo cuando se cumple la meta, hasta el objetivo elegido
 - **Hábitos editables** (renombrar, agregar, eliminar; máscara L-V por hábito)
-- **Medidas** con % de grasa estimado (fórmula Navy, distinta por sexo)
-- **Rutina del día** con enlace a video por ejercicio
+- **Medidas:** cintura y cuello semanales · hombros, brazo y muslo el día 1 del mes.
+  Calcula % de grasa (Navy), masa magra y **RATIO V** (hombros ÷ cintura)
+- **Veredicto de recomposición:** compara contra la medición de hace ~30 días.
+  Cintura que baja con la masa magra intacta = `RECOMPONIENDO ✓`; si la magra cae
+  más de 1 kg avisa `PERDIENDO MÚSCULO`. Es lo único que distingue adelgazar de
+  recomponerse, y no se ve en la balanza
+- **Las dos curvas que deben subir:** masa magra y ratio V en el tiempo, junto a
+  la del peso que baja — las tres cuentan la historia que ninguna cuenta sola
+- **Rutina por fases** ligada a la carga semanal: fase 0 pool libre → fase 3 con
+  4 sesiones y 20 ejercicios. Sube de fase sola y lo celebra con un banner.
+  Prioridad por tiers: si hay que recortar, se recorta de abajo
 - Hitos, rachas, mosaico de 12 semanas, cierre de mes
 
 ## Protección de datos (3 capas)
