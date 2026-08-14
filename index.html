@@ -274,7 +274,7 @@
     <div class="mh-row">
       <div>
         <div class="mh-big num" id="mhMeta">—</div>
-        <div class="mh-sub">CIERRE PEDIDO ✎</div>
+        <div class="mh-sub" id="mhSub">CIERRE PEDIDO ✎</div>
       </div>
       <div class="mh-info" id="mhInfo">—</div>
     </div>
@@ -415,6 +415,18 @@
       <span class="m2"></span><span class="m3"></span><span class="m4"></span> más</div>
   </section>
 
+  <!-- HOJA DE RUTA — la app calcula el calendario, nadie lo teclea -->
+  <section class="card">
+    <p class="tit">Hoja de ruta <small id="rutaTag">AUTOCALCULADA</small></p>
+    <div class="alarma" id="rutaAlarma" style="display:none"></div>
+    <div id="rutaHero"></div>
+    <div class="mes-nav" style="margin:11px 0 0">
+      <button class="btn2" id="btnGrasaObj" style="flex:1; font-size:11px; white-space:nowrap">GRASA ✎</button>
+      <button class="btn2" id="btnRitmo" style="flex:1; font-size:11px; white-space:nowrap">RITMO ✎</button>
+    </div>
+    <div id="rutaTabla" style="margin-top:11px"></div>
+  </section>
+
   <!-- MESES (Tally: navegación temporal + totales por mes) -->
   <section class="card">
     <p class="tit">Meses <small id="mesRango"></small></p>
@@ -517,6 +529,7 @@ function cargar(){
   if(!d.medidas) d.medidas=[];
   if(!d.ejerc) d.ejerc={};                      /* {fecha: [nombres de ejercicios hechos]} */
   if(!d.carga) d.carga={meta:1, objetivo:20};    /* empieza en 1: el primer escalón debe ser ridículo */
+  if(!d.plan) d.plan={grasaObj:15, ritmo:'normal', magraBase:null};  /* la hoja de ruta se calcula sola */
   if(d.carga.faseVista==null) d.carga.faseVista=null;  /* se fija en el primer render */
   if(!d.perfil) d.perfil={nombre:'', sexo:'H', h:170, ini:90, meta:80, listo:!esNuevo};
   if(!d.perfil.sexo) d.perfil.sexo='H';
@@ -626,10 +639,58 @@ function tierRitmo(kgSem){ /* kgSem positivo = bajando */
   return {c:'t-fria', t:'FORJA FRÍA'};
 }
 
+/* ================= HOJA DE RUTA AUTOCALCULADA =================
+   El calendario no se teclea: sale de la última medición. Se regenera
+   sola en cada medición nueva — si un mes se estanca, todo el plan se
+   corre solo. El supuesto es que la masa magra NO cambia; cuando la
+   realidad lo desmiente, la app lo dice (ver avisoSupuesto). */
+function ritmoMaxSeguro(g){        /* kg/semana máximos según el % de grasa vigente */
+  if(g>=30) return 0.90;
+  if(g>=25) return 0.70;
+  if(g>=20) return 0.60;
+  if(g>=15) return 0.40;
+  return 0.30;
+}
+var FACTOR_RITMO={conservador:0.6, normal:0.75, agresivo:0.95};
+/* magra vigente = la de la última medición con datos suficientes */
+function magraActual(){
+  var ms=medsOrd();
+  for(var i=ms.length-1;i>=0;i--){ var m=magraDe(ms[i]); if(m!=null) return m; }
+  return null;
+}
+function hojaDeRuta(){
+  var magra=magraActual(); if(magra==null) return null;
+  var w=pesos(); if(!w.length) return null;
+  var peso=w[w.length-1].kg;
+  var f=FACTOR_RITMO[st.plan.ritmo]||FACTOR_RITMO.normal;
+  var pesoObj=magra/(1-st.plan.grasaObj/100);
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
+  var metas={}, cur=new Date(hoy), p=peso, guard=0;
+  if(p<=pesoObj) return {magra:magra, pesoObj:pesoObj, metas:{}, llegada:hoy, yaLlego:true, meses:0};
+  /* paso diario: una meta de fin de mes debe ser el peso proyectado a ESE día */
+  while(p>pesoObj && guard<3650){
+    var gHoy=(p-magra)/p*100;
+    p-=ritmoMaxSeguro(gHoy)*f/7;
+    cur=new Date(cur.getTime()+864e5);
+    var man=new Date(cur.getTime()+864e5);
+    if(man.getMonth()!==cur.getMonth()) metas[ymStr(cur)]=Math.round(p*2)/2;
+    guard++;
+  }
+  metas[ymStr(cur)]=Math.round(Math.max(p,pesoObj)*2)/2;   /* el mes de llegada cierra en la meta */
+  return {magra:magra, pesoObj:pesoObj, metas:metas, llegada:cur, yaLlego:false,
+          meses:Object.keys(metas).length, dias:guard};
+}
+var RUTA=null;   /* se recalcula en cada render: siempre refleja la última medición */
+/* la ruta gobierna; las metas tecleadas quedan de respaldo mientras no haya medición */
+function metaDeMes(ym){
+  if(RUTA&&RUTA.metas[ym]!=null) return RUTA.metas[ym];
+  return st.goals.mes[ym]!=null?st.goals.mes[ym]:null;
+}
+
 /* ---- meta del mes (Tally: objetivo mensual + catch-up) ---- */
 function metaMesActual(){
   var ym=ymStr();
-  if(st.goals.mes[ym]!=null) return st.goals.mes[ym];
+  if(metaDeMes(ym)!=null) return metaDeMes(ym);
   var w=pesos(); if(!w.length) return null;
   var ini=null;
   for(var i=w.length-1;i>=0;i--){ if(w[i].d<ym+'-01'){ ini=w[i].kg; break; } }
@@ -641,6 +702,7 @@ function metaMesActual(){
 function render(){
   /* el perfil manda: la app sirve a cualquier persona con sus propios números */
   META_INICIO=st.perfil.ini; META_FIN=st.perfil.meta;
+  RUTA=hojaDeRuta();          /* primero: el calendario del que cuelgan las metas */
   document.getElementById('norteTag').textContent='NORTE: '+META_FIN+' KG';
   document.getElementById('barIni').textContent=META_INICIO;
   document.getElementById('barFin').textContent=META_FIN;
@@ -676,6 +738,7 @@ function render(){
   document.getElementById('mhFill').style.width=Math.round(diaHoy/ultDia*100)+'%';
   document.getElementById('mhPct').textContent='el mes ya corrió '+Math.round(diaHoy/ultDia*100)+'%';
   var elMI=document.getElementById('mhInfo');
+  document.getElementById('mhSub').textContent=(RUTA&&RUTA.metas[ymStr()]!=null)?'CIERRE · HOJA DE RUTA':'CIERRE PEDIDO ✎';
   if(mm!=null){
     document.getElementById('mhMeta').textContent=mm.toFixed(1);
     if(act!=null){
@@ -751,7 +814,7 @@ function render(){
     }
   }
 
-  fotoRender(); chipsRender(reg); rutina(); carga(); faseRender(); medidas(); grafica(); mosaico(); semana(); cierreMes(); renderMes(); perfilRender(); avisoBackup();
+  fotoRender(); chipsRender(reg); rutina(); carga(); faseRender(); medidas(); grafica(); mosaico(); semana(); cierreMes(); rutaRender(); renderMes(); perfilRender(); avisoBackup();
 }
 
 /* ---- CARGA SEMANAL ----
@@ -1230,6 +1293,85 @@ function faseRender(){
   }
 }
 
+/* ---- RENDER DE LA HOJA DE RUTA ---- */
+var RITMO_TXT={conservador:'CONSERVADOR', normal:'NORMAL', agresivo:'AGRESIVO'};
+function rutaRender(){
+  var hero=document.getElementById('rutaHero'), tabla=document.getElementById('rutaTabla');
+  var al=document.getElementById('rutaAlarma');
+  document.getElementById('btnGrasaObj').textContent='GRASA '+st.plan.grasaObj+'% ✎';
+  document.getElementById('btnRitmo').textContent=RITMO_TXT[st.plan.ritmo]+' ✎';
+  /* SUPUESTO ROTO: el plan asume masa magra constante. Si la real cae más de
+     1 kg bajo la del plan, está perdiendo músculo y el destino empeora. */
+  var mAct=magraActual();
+  if(mAct!=null){
+    if(st.plan.magraBase==null){ st.plan.magraBase=mAct; guardar(); }
+    if(mAct < st.plan.magraBase-1){
+      al.style.display='block';
+      al.innerHTML='<b>⚠ El supuesto del plan se rompió.</b><br>'+
+        'Tu masa magra bajó de <b>'+st.plan.magraBase.toFixed(1)+'</b> a <b>'+mAct.toFixed(1)+' kg</b>: '+
+        'estás perdiendo músculo, no solo grasa. El calendario de abajo ya está recalculado con la '+
+        'magra nueva — y llega a un cuerpo más liviano y menos denso. '+
+        '<b>Sube la proteína y no recortes más comida.</b>';
+    } else al.style.display='none';
+  } else al.style.display='none';
+
+  if(!RUTA){
+    document.getElementById('rutaTag').textContent='FALTA TU PRIMERA MEDICIÓN';
+    hero.innerHTML='<div style="color:var(--ceniza); font-size:13.5px; line-height:1.6">'+
+      'La app arma el calendario sola, pero necesita saber de qué está hecho tu peso. '+
+      'Toma <b style="color:var(--chispa)">cintura y cuello</b> arriba y aquí aparece tu fecha de llegada '+
+      'y la meta de cada mes hasta ahí.<br>'+
+      '<span style="font-size:12px">Mientras tanto rigen las metas cargadas a mano.</span></div>';
+    tabla.innerHTML='';
+    return;
+  }
+  var llega=RUTA.llegada;
+  if(RUTA.yaLlego){
+    document.getElementById('rutaTag').textContent='CONQUISTADA';
+    hero.innerHTML='<div class="mh-row"><div><div class="mh-big num">'+RUTA.pesoObj.toFixed(1)+'</div>'+
+      '<div class="mh-sub">YA ESTÁS AHÍ ⚑</div></div>'+
+      '<div class="mh-info">Llegaste al <b>'+st.plan.grasaObj+'%</b> de grasa.<br>'+
+      '<span style="color:var(--ceniza)">Sube el objetivo o cambia a construir.</span></div></div>';
+    tabla.innerHTML='';
+    return;
+  }
+  document.getElementById('rutaTag').textContent=RUTA.meses+' MESES';
+  hero.innerHTML='<div class="mh-row"><div>'+
+    '<div class="mh-big num">'+RUTA.pesoObj.toFixed(1)+'</div>'+
+    '<div class="mh-sub">DESTINO · '+st.plan.grasaObj+'% DE GRASA</div></div>'+
+    '<div class="mh-info">llegas <b>'+llega.toLocaleDateString('es-PE',{month:'long',year:'numeric'})+'</b><br>'+
+    '<span class="num" style="font-size:12.5px">'+fmt(llega)+' · faltan '+RUTA.dias+' días</span><br>'+
+    '<span style="color:var(--ceniza); font-size:12px">con tu masa magra de '+RUTA.magra.toFixed(1)+' kg</span></div></div>';
+  /* calendario mes a mes */
+  var ks=Object.keys(RUTA.metas).sort(), html='', hoyYm=ymStr();
+  ks.forEach(function(ym){
+    var a=ym.split('-'), nom=MESES[+a[1]-1]+" '"+a[0].slice(2);
+    var esUlt=ym===ks[ks.length-1];
+    html+='<div class="mes-fila"><span class="mk">'+nom+(ym===hoyYm?' ·':'')+'</span>'+
+      '<span class="mv num"><b'+(esUlt?' style="color:var(--chispa)"':'')+'>'+RUTA.metas[ym].toFixed(1)+'</b> kg'+
+      (esUlt?' <span class="ok">⚑ LLEGADA</span>':'')+'</span></div>';
+  });
+  tabla.innerHTML=html+'<div style="color:var(--ceniza); font-size:11.5px; margin-top:9px; line-height:1.5">'+
+    'Este calendario lo genera la app desde tu última medición y el ritmo elegido. '+
+    '<b>Se recalcula solo</b> cada vez que te midas: si un mes se estanca, todo se corre.</div>';
+}
+document.getElementById('btnGrasaObj').onclick=function(){
+  var v=parseFloat(prompt('¿A qué % de grasa quieres llegar?\n\n'+
+    '10-12% = marcado, abdominales visibles\n15% = atlético, se te nota la forma\n20% = saludable, sin definición',
+    st.plan.grasaObj));
+  if(!v||v<8||v>30){ if(!isNaN(v)) alert('Entre 8 y 30%'); return; }
+  st.plan.grasaObj=v; guardar(); render();
+};
+document.getElementById('btnRitmo').onclick=function(){
+  var r=(prompt('Ritmo del plan — escribe C, N o A:\n\n'+
+    'C = Conservador (60% del máximo seguro)\n'+
+    'N = Normal (75%) — el recomendado\n'+
+    'A = Agresivo (95% del máximo seguro)', st.plan.ritmo.charAt(0).toUpperCase())||'').toUpperCase().charAt(0);
+  var m={C:'conservador', N:'normal', A:'agresivo'};
+  if(!m[r]){ alert('Escribe C, N o A'); return; }
+  st.plan.ritmo=m[r]; guardar(); render();
+};
+
 /* ---- NAVEGADOR DE MESES (Tally: ‹ › temporal + totales del calendario) ---- */
 var mesVista=ymStr();
 function ymMin(){
@@ -1243,6 +1385,7 @@ function ymMin(){
 function ymMax(){
   var m=new Date().getFullYear()+'-12';
   Object.keys(st.goals.mes).forEach(function(k){ if(k>m) m=k; });
+  if(RUTA) Object.keys(RUTA.metas).forEach(function(k){ if(k>m) m=k; });
   return m;
 }
 function ymSuma(ym,delta){
@@ -1277,7 +1420,8 @@ function renderMes(){
   document.getElementById('mesTit').textContent=MESES[m-1]+' '+y;
   document.getElementById('mesPrev').disabled=mesVista<=ymMin();
   document.getElementById('mesNext').disabled=mesVista>=ymMax();
-  var actualYm=ymStr(), s=statsMes(mesVista), meta=st.goals.mes[mesVista];
+  var actualYm=ymStr(), s=statsMes(mesVista), meta=metaDeMes(mesVista);
+  var deRuta=!!(RUTA&&RUTA.metas[mesVista]!=null);
   var html='';
   function fila(k,v){ return '<div class="mes-fila"><span class="mk">'+k+'</span><span class="mv num">'+v+'</span></div>'; }
   if(mesVista>actualYm){ /* mes futuro: planificación */
@@ -1306,6 +1450,12 @@ function renderMes(){
   document.getElementById('mesBody').innerHTML=html;
   document.getElementById('mesRango').textContent=ymMin().replace('-','·')+' → '+ymMax().replace('-','·');
   document.getElementById('mesBody').onclick=function(){
+    if(deRuta){   /* la ruta manda: se ajusta por sus perillas, no mes a mes */
+      alert('Esta meta la calcula la app desde tu última medición.\n\n'+
+        'Para cambiarla, ajusta el % objetivo o el ritmo en la tarjeta HOJA DE RUTA — '+
+        'y todo el calendario se recalcula solo.');
+      return;
+    }
     var raw=prompt('Meta de peso para fin de '+MESES[m-1]+' '+y+' (kg):', meta!=null?meta:'');
     if(raw==null) return;
     var v=parseFloat(raw);
@@ -1492,6 +1642,11 @@ document.getElementById('btnPeso').onclick=function(){
 
 /* ---- META DEL MES editable ---- */
 document.getElementById('mesHero').addEventListener('click',function(){
+  if(RUTA&&RUTA.metas[ymStr()]!=null){
+    alert('Esta meta la calcula la app desde tu última medición.\n\n'+
+      'Para cambiarla, ajusta el % objetivo o el ritmo en la tarjeta HOJA DE RUTA.');
+    return;
+  }
   var mm=metaMesActual();
   var raw=prompt('Meta de peso para fin de '+MESES[new Date().getMonth()]+' (kg):', mm!=null?mm:'');
   if(raw==null) return;

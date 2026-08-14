@@ -13,7 +13,15 @@ El código no contiene datos de nadie: al abrirla por primera vez pide el perfil
 ## Qué hace
 
 - **Peso diario** con proyección por regresión de 28 días hasta la meta
-- **Metas por capas:** mes (con ritmo requerido) · año · hoy
+- **Hoja de ruta autocalculada:** desde la última medición la app deriva la masa
+  magra, el peso al que llegas con tu % de grasa objetivo, y **genera el calendario
+  mes a mes hasta la fecha de llegada**. El ritmo respeta un máximo seguro que baja
+  conforme baja la grasa (0.90 kg/sem sobre 30% → 0.30 bajo 15%), escalado por el
+  modo elegido (conservador/normal/agresivo). Se regenera en cada medición: si un
+  mes se estanca, el calendario entero se corre solo.
+  El plan asume masa magra constante; **cuando una medición real la desmiente, la
+  app avisa que el supuesto se rompió** y recalcula hacia un destino peor
+- **Metas por capas:** mes (de la hoja de ruta) · año · hoy
 - **Carga semanal:** el marcador del entrenamiento — arranca en 1 ejercicio por
   semana y sube solo cuando se cumple la meta, hasta el objetivo elegido
 - **Hábitos editables** (renombrar, agregar, eliminar; máscara L-V por hábito)
