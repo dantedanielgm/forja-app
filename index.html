@@ -1238,7 +1238,13 @@ function ymMin(){
   ms.push(ymStr());
   return ms.sort()[0];
 }
-function ymMax(){ return new Date().getFullYear()+'-12'; }
+/* El horizonte llega hasta donde haya metas puestas: planificar más allá de
+   diciembre es planificar la fase siguiente, y el navegador debe alcanzarla. */
+function ymMax(){
+  var m=new Date().getFullYear()+'-12';
+  Object.keys(st.goals.mes).forEach(function(k){ if(k>m) m=k; });
+  return m;
+}
 function ymSuma(ym,delta){
   var a=ym.split('-');
   var d=new Date(+a[0],+a[1]-1+delta,1);
@@ -1303,7 +1309,7 @@ function renderMes(){
     var raw=prompt('Meta de peso para fin de '+MESES[m-1]+' '+y+' (kg):', meta!=null?meta:'');
     if(raw==null) return;
     var v=parseFloat(raw);
-    if(!v||v<META_FIN-5||v>120){ alert('Valor no válido'); return; }
+    if(!v||v<META_FIN-15||v>120){ alert('Valor no válido'); return; }
     st.goals.mes[mesVista]=v; guardar(); render();
   };
 }
@@ -1490,7 +1496,7 @@ document.getElementById('mesHero').addEventListener('click',function(){
   var raw=prompt('Meta de peso para fin de '+MESES[new Date().getMonth()]+' (kg):', mm!=null?mm:'');
   if(raw==null) return;
   var v=parseFloat(raw);
-  if(!v||v<META_FIN-5||v>120){ alert('Valor no válido'); return; }
+  if(!v||v<META_FIN-15||v>120){ alert('Valor no válido'); return; }
   st.goals.mes[ymStr()]=v; guardar(); render();
 });
 
