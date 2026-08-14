@@ -45,6 +45,19 @@
   .mh-bar{height:9px; background:var(--hierro); margin-top:12px; overflow:hidden}
   .mh-bar .fill{height:100%; background:linear-gradient(90deg,#6E3A1A,var(--brasa)); transition:width .6s ease}
 
+  /* DESTINO — vive pegado a la meta del mes: los dos números, siempre juntos */
+  .destino-row{display:flex; justify-content:space-between; align-items:center; gap:12px;
+    margin-top:12px; padding-top:11px; border-top:2px solid var(--hierro)}
+  .dst-k{font-size:9.5px; color:var(--ceniza); letter-spacing:2px; font-weight:900}
+  .dst-v{font-size:32px; font-weight:700; color:var(--chispa); line-height:1.05}
+  .dst-info{text-align:right; font-size:12.5px; line-height:1.5; color:var(--hueso)}
+  .dst-info b{color:var(--chispa)}
+  .dst-info .fecha{color:var(--brasa); font-weight:900}
+  .hito-prox{margin-top:10px; padding:9px 11px; background:var(--carbon);
+    border-left:3px solid var(--brasa); font-size:12.5px; line-height:1.5; display:none}
+  .hito-prox b{color:var(--brasa)}
+  .hito-prox .pk{color:var(--chispa); font-weight:900}
+
   /* ALARMA de almacenamiento */
   .alarma{display:none; background:#3A1410; border:2px solid #FF6B4A; color:#FFD9CF;
     padding:13px 15px; font-size:13px; line-height:1.5}
@@ -267,6 +280,7 @@
 
   <div class="hito num" id="hito"></div>
   <div class="fase-banner" id="faseBanner"></div>
+  <div class="fase-banner" id="destinoBanner"></div>
 
   <!-- EL MES PRIMERO (pedido DD: urgencia de días restantes + cierre pedido) -->
   <section class="card meta-mes-btn" id="mesHero" title="Toca para editar la meta del mes">
@@ -280,6 +294,15 @@
     </div>
     <div class="mh-bar"><div class="fill" id="mhFill" style="width:0%"></div></div>
     <div class="barra-l num"><span>día 1</span><span id="mhPct"></span><span id="mhFin">—</span></div>
+    <!-- EL DESTINO, SIEMPRE JUNTO A LA META DEL MES. Nunca uno sin el otro. -->
+    <div class="destino-row" id="destinoRow">
+      <div>
+        <div class="dst-k">DESTINO</div>
+        <div class="dst-v num" id="dstPeso">—</div>
+      </div>
+      <div class="dst-info" id="dstInfo">—</div>
+    </div>
+    <div class="hito-prox" id="hitoProx"></div>
   </section>
 
   <section class="card" id="cierreMes" style="display:none">
@@ -299,7 +322,7 @@
       </div>
     </div>
     <div class="barra"><div class="fill" id="fill" style="width:0%"></div></div>
-    <div class="barra-l num"><span id="barIni">94</span><span id="pct">0%</span><span id="barFin">84</span></div>
+    <div class="barra-l num"><span id="barIni">—</span><span id="pct">0%</span><span id="barFin">—</span></div>
     <div class="metas">
       <div class="meta-row meta-mes-btn" id="metaAnioRow" title="Toca para editar">
         <span class="k" id="metaAnioK">AÑO</span><span class="v" id="metaAnio">—</span>
@@ -308,7 +331,7 @@
         <span class="k">HOY</span><span class="v" id="metaHoy">—</span>
       </div>
       <div class="meta-row">
-        <span class="k">CAMINO</span><span class="v" id="proy">—</span>
+        <span class="k" id="proyK">RITMO</span><span class="v" id="proy">—</span>
       </div>
       <div class="meta-row" id="recompRow" style="display:none">
         <span class="k">RECOMP</span><span class="v" id="recompMini">—</span>
@@ -366,7 +389,7 @@
 
   <!-- GRÁFICA -->
   <section class="card">
-    <p class="tit"><span id="caminoTit">Camino a 84</span> <small id="chartMeta"></small></p>
+    <p class="tit"><span id="caminoTit">El camino</span> <small id="chartMeta"></small></p>
     <div id="chart"></div>
   </section>
 
@@ -484,7 +507,7 @@
 'use strict';
 var KEY='forja_v1', SNAP_PRE='forja_snap_', SNAP_MAX=7, PREV_KEY='forja_prev';
 var recuperadoDe=null;
-var META_INICIO=94, META_FIN=84;
+var META_INICIO=0, META_FIN=0;   /* ambos salen del perfil y de la medición en cada render */
 var DEF_HABITOS=[
   {k:'s', label:'Dormido 10 pm'},
   {k:'z', label:'Solo zero'},
@@ -531,7 +554,7 @@ function cargar(){
   if(!d.carga) d.carga={meta:1, objetivo:20};    /* empieza en 1: el primer escalón debe ser ridículo */
   if(!d.plan) d.plan={grasaObj:15, ritmo:'normal', magraBase:null};  /* la hoja de ruta se calcula sola */
   if(d.carga.faseVista==null) d.carga.faseVista=null;  /* se fija en el primer render */
-  if(!d.perfil) d.perfil={nombre:'', sexo:'H', h:170, ini:90, meta:80, listo:!esNuevo};
+  if(!d.perfil) d.perfil={nombre:'', sexo:'H', h:170, ini:90, meta:0, listo:!esNuevo};
   if(!d.perfil.sexo) d.perfil.sexo='H';
   if(d.perfil.listo===undefined) d.perfil.listo=true;  /* instalaciones previas ya estaban configuradas */
   return d;
@@ -673,18 +696,67 @@ function hojaDeRuta(){
     p-=ritmoMaxSeguro(gHoy)*f/7;
     cur=new Date(cur.getTime()+864e5);
     var man=new Date(cur.getTime()+864e5);
-    if(man.getMonth()!==cur.getMonth()) metas[ymStr(cur)]=Math.round(p*2)/2;
+    /* un decimal, no medio kilo: redondear a 0.5 endurecía la meta del mes y
+       hacía que el hero pidiera ACELERA cuando el ritmo real iba bien */
+    if(man.getMonth()!==cur.getMonth()) metas[ymStr(cur)]=Math.round(p*10)/10;
     guard++;
   }
-  metas[ymStr(cur)]=Math.round(Math.max(p,pesoObj)*2)/2;   /* el mes de llegada cierra en la meta */
+  metas[ymStr(cur)]=Math.round(Math.max(p,pesoObj)*10)/10;   /* el mes de llegada cierra en la meta */
   return {magra:magra, pesoObj:pesoObj, metas:metas, llegada:cur, yaLlego:false,
           meses:Object.keys(metas).length, dias:guard};
 }
 var RUTA=null;   /* se recalcula en cada render: siempre refleja la última medición */
+/* EL DESTINO SE CALCULA, NO SE ESCRIBE. Sale de la masa magra que tengas hoy.
+   Si la magra sube, el destino sube — y eso es BUENO: mismo % de grasa sobre
+   más músculo es un cuerpo mejor, no una meta que se aleja. */
+function destinoPeso(){
+  var m=magraActual();
+  if(m==null)   /* sin medición: la semilla del perfil, o un provisional derivado del inicio */
+    return st.perfil.meta||Math.round(st.perfil.ini*0.85*2)/2;
+  return Math.round(m/(1-st.plan.grasaObj/100)*2)/2;
+}
+/* HITOS POR % DE GRASA — los kilos no dicen cómo te ves; el % sí.
+   El peso de cada hito sale de tu magra real. */
+var HITOS_GRASA=[
+  {g:28, t:'la ropa te queda distinta y la cara se define'},
+  {g:25, t:'la gente empieza a comentarlo'},
+  {g:22, t:'la cintura cambia visiblemente, aparece la forma'},
+  {g:18, t:'atlético: hombros y espalda se notan'},
+  {g:15, t:'DEFINIDO — la referencia que quieres'}
+];
+function grasaHoy(){
+  var m=magraActual(); if(m==null) return null;
+  var w=pesos(); if(!w.length) return null;
+  var p=w[w.length-1].kg;
+  return (p-m)/p*100;
+}
+function pesoAGrasa(g){
+  var m=magraActual(); return m==null?null:m/(1-g/100);
+}
+function proximoHito(){
+  var g=grasaHoy(); if(g==null) return null;
+  for(var i=0;i<HITOS_GRASA.length;i++){
+    if(HITOS_GRASA[i].g < g-0.5){
+      var h=HITOS_GRASA[i];
+      return {g:h.g, t:h.t, peso:pesoAGrasa(h.g), ultimo:i===HITOS_GRASA.length-1};
+    }
+  }
+  return null;
+}
 /* la ruta gobierna; las metas tecleadas quedan de respaldo mientras no haya medición */
 function metaDeMes(ym){
   if(RUTA&&RUTA.metas[ym]!=null) return RUTA.metas[ym];
   return st.goals.mes[ym]!=null?st.goals.mes[ym]:null;
+}
+/* el año cierra donde diga la ruta ese diciembre; si ya llegaste dentro del año, en el destino */
+function metaDeAnio(y){
+  if(RUTA){
+    var dic=RUTA.metas[y+'-12'];
+    if(dic!=null) return dic;
+    var ks=Object.keys(RUTA.metas).sort();
+    if(ks.length&&ks[ks.length-1].slice(0,4)<=String(y)) return META_FIN;
+  }
+  return st.goals.anio[y]!=null?st.goals.anio[y]:META_FIN;
 }
 
 /* ---- meta del mes (Tally: objetivo mensual + catch-up) ---- */
@@ -701,8 +773,9 @@ function metaMesActual(){
 
 function render(){
   /* el perfil manda: la app sirve a cualquier persona con sus propios números */
-  META_INICIO=st.perfil.ini; META_FIN=st.perfil.meta;
+  META_INICIO=st.perfil.ini;
   RUTA=hojaDeRuta();          /* primero: el calendario del que cuelgan las metas */
+  META_FIN=destinoPeso();     /* un solo destino, calculado de tu composición */
   document.getElementById('norteTag').textContent='NORTE: '+META_FIN+' KG';
   document.getElementById('barIni').textContent=META_INICIO;
   document.getElementById('barFin').textContent=META_FIN;
@@ -739,6 +812,47 @@ function render(){
   document.getElementById('mhPct').textContent='el mes ya corrió '+Math.round(diaHoy/ultDia*100)+'%';
   var elMI=document.getElementById('mhInfo');
   document.getElementById('mhSub').textContent=(RUTA&&RUTA.metas[ymStr()]!=null)?'CIERRE · HOJA DE RUTA':'CIERRE PEDIDO ✎';
+
+  /* DESTINO + FECHA, siempre visible junto a la meta del mes */
+  var dP=document.getElementById('dstPeso'), dI=document.getElementById('dstInfo');
+  dP.textContent=META_FIN.toFixed(1);
+  if(RUTA&&!RUTA.yaLlego&&act!=null){
+    var faltanKg=act-META_FIN, mesesR=Math.max(1,Math.round(RUTA.dias/30.44));
+    dI.innerHTML='<span class="fecha">~'+RUTA.llegada.toLocaleDateString('es-PE',{month:'short',year:'numeric'})+'</span><br>'+
+      'faltan <b class="num">'+faltanKg.toFixed(1)+'</b> kg · <b class="num">'+mesesR+'</b> meses<br>'+
+      '<span style="color:var(--ceniza); font-size:11.5px">al '+st.plan.grasaObj+'% de grasa</span>';
+  } else if(RUTA&&RUTA.yaLlego){
+    dI.innerHTML='<span class="ok">CONQUISTADO ⚑</span><br><span style="color:var(--ceniza); font-size:11.5px">'+
+      'estás en el '+st.plan.grasaObj+'% de grasa</span>';
+  } else {
+    dI.innerHTML='<span style="color:var(--ceniza); font-size:11.5px">Mide cintura y cuello<br>'+
+      'y este número se calcula<br>de tu masa magra real</span>';
+  }
+  /* EL DESTINO SUBIÓ = GANASTE MÚSCULO. Es una buena noticia, no una meta
+     que se aleja: el mismo % de grasa sobre más músculo es un cuerpo mejor. */
+  var db=document.getElementById('destinoBanner');
+  if(magraActual()!=null){
+    if(st.plan.destinoVisto==null){ st.plan.destinoVisto=META_FIN; guardar(); }
+    if(META_FIN>st.plan.destinoVisto+0.4){
+      db.style.display='block';
+      db.innerHTML='⚒ TU DESTINO SUBIÓ A '+META_FIN.toFixed(1)+' KG<br>'+
+        '<span style="font-weight:400; font-size:12.5px">Ganaste músculo: la meta no se alejó, '+
+        'mejoró. El mismo '+st.plan.grasaObj+'% de grasa sobre más músculo es un cuerpo más grande '+
+        'y con mejor forma. Toca para cerrar.</span>';
+      db.onclick=function(){ st.plan.destinoVisto=META_FIN; guardar(); db.style.display='none'; };
+    } else {
+      db.style.display='none';
+      if(META_FIN<st.plan.destinoVisto){ st.plan.destinoVisto=META_FIN; guardar(); }  /* bajó: lo cubre la alarma de supuesto roto */
+    }
+  } else db.style.display='none';
+
+  /* PRÓXIMO HITO — por % de grasa, que es lo que decide cómo te ves */
+  var hp=document.getElementById('hitoProx'), ph=proximoHito();
+  if(ph){
+    hp.style.display='block';
+    hp.innerHTML='PRÓXIMO HITO: <b>'+ph.g+'% de grasa</b> <span class="pk num">(~'+ph.peso.toFixed(0)+' kg)</span><br>'+
+      '<span style="color:var(--ceniza)">'+(ph.ultimo?'':'ahí ')+ph.t+'</span>';
+  } else hp.style.display='none';
   if(mm!=null){
     document.getElementById('mhMeta').textContent=mm.toFixed(1);
     if(act!=null){
@@ -758,7 +872,7 @@ function render(){
 
   /* META DEL AÑO (Tally: la capa larga sobre la mensual) */
   var anioAct=ahora.getFullYear();
-  var ma=st.goals.anio[anioAct]!=null?st.goals.anio[anioAct]:META_FIN;
+  var ma=metaDeAnio(anioAct);
   document.getElementById('metaAnioK').textContent=anioAct;
   var elMA=document.getElementById('metaAnio');
   if(act!=null){
@@ -790,12 +904,26 @@ function render(){
     (esDiaE?(reg.e?' · entreno <span class="ok">✓</span>':' · <b>toca entrenar</b>'):'')+
     (n===defsHoy.length?' · <span class="ok">DÍA FORJADO ⚒</span>':'');
 
-  /* PROYECCIÓN */
-  var proy=document.getElementById('proy');
-  if(t && t.m<-0.004 && act!=null){
+  /* RITMO REAL vs EL QUE PIDE EL PLAN.
+     Antes esta fila proyectaba una segunda fecha de llegada extrapolando la
+     tendencia — pero esa extrapolación asume un ritmo constante que el propio
+     plan frena a propósito, y competía con la fecha del destino. Dos fechas
+     para el mismo peso confunden; una comparación de ritmos sirve. */
+  var proy=document.getElementById('proy'), gAhora=grasaHoy();
+  var kgSemReal=t?-t.m*7:null;
+  if(kgSemReal!=null && gAhora!=null){
+    var planSem=ritmoMaxSeguro(gAhora)*(FACTOR_RITMO[st.plan.ritmo]||0.75);
+    var okR=kgSemReal>=planSem*0.9;
+    document.getElementById('proyK').textContent='RITMO';
+    proy.innerHTML='vas <b class="num">-'+Math.abs(kgSemReal).toFixed(2)+'</b>/sem · el plan pide '+
+      '<b class="num">-'+planSem.toFixed(2)+'</b> '+
+      (okR?'<span class="ok">✓</span>':'<span style="color:#FF9A6B">acelera</span>');
+  } else if(t && t.m<-0.004 && act!=null && META_FIN){
+    /* sin medición no hay plan: sirve la proyección de la balanza */
     var yUlt=t.a+t.m*dias(t.x0,t.ult);
     var dRest=(META_FIN-yUlt)/t.m;
     var fecha=new Date(t.ult.getTime()+dRest*864e5);
+    document.getElementById('proyK').textContent='CAMINO';
     proy.innerHTML='<b>'+META_FIN+' kg</b> ≈ <b>'+fecha.toLocaleDateString('es-PE',{day:'numeric',month:'long'})+'</b>';
   } else proy.innerHTML='Aún sin tendencia. <b>La semana manda.</b>';
 
@@ -907,7 +1035,10 @@ function perfilRender(){
     '<div class="mes-fila"><span class="mk">SEXO · ESTATURA</span><span class="mv num">'+
       (p.sexo==='M'?'Mujer':'Hombre')+' · <b>'+p.h+'</b> cm</span></div>'+
     '<div class="mes-fila"><span class="mk">PUNTO DE PARTIDA</span><span class="mv num"><b>'+p.ini.toFixed(1)+'</b> kg</span></div>'+
-    '<div class="mes-fila"><span class="mk">EL NORTE</span><span class="mv num"><b>'+p.meta.toFixed(1)+'</b> kg</span></div>';
+    '<div class="mes-fila"><span class="mk">EL NORTE</span><span class="mv num"><b>'+META_FIN.toFixed(1)+'</b> kg'+
+      (magraActual()!=null
+        ? ' <span style="color:var(--ceniza); font-size:11px">calculado · '+st.plan.grasaObj+'% grasa</span>'
+        : ' <span style="color:var(--ceniza); font-size:11px">provisional ✎</span>')+'</span></div>';
 }
 document.getElementById('perfilCard').addEventListener('click',function(){
   var p=st.perfil;
@@ -918,8 +1049,13 @@ document.getElementById('perfilCard').addEventListener('click',function(){
   if(!h||h<120||h>220){ alert('Estatura entre 120 y 220 cm'); return; }
   var ini=parseFloat(prompt('Peso de partida (kg) — desde dónde arrancaste:', p.ini));
   if(!ini||ini<35||ini>250){ alert('Peso entre 35 y 250 kg'); return; }
-  var meta=parseFloat(prompt('Tu meta de peso (kg):', p.meta));
-  if(!meta||meta<35||meta>250){ alert('Meta entre 35 y 250 kg'); return; }
+  var meta=p.meta;
+  if(magraActual()==null){   /* sin medición todavía: la meta es una semilla provisional */
+    meta=parseFloat(prompt('Tu meta de peso (kg) — provisional:\n\n'+
+      'En cuanto midas cintura y cuello, la app calcula tu destino real desde tu masa magra '+
+      'y este número deja de usarse.', p.meta));
+    if(!meta||meta<35||meta>250){ alert('Meta entre 35 y 250 kg'); return; }
+  }
   st.perfil={nombre:nom.trim(), sexo:sx, h:h, ini:ini, meta:meta, listo:true};
   guardar(); render();
 });
@@ -1468,6 +1604,11 @@ document.getElementById('mesNext').onclick=function(){ mesVista=ymSuma(mesVista,
 
 /* ---- META DEL AÑO editable ---- */
 document.getElementById('metaAnioRow').addEventListener('click',function(){
+  if(RUTA){
+    alert('La meta del año sale de tu hoja de ruta.\n\n'+
+      'Para moverla, ajusta el % objetivo o el ritmo en la tarjeta HOJA DE RUTA.');
+    return;
+  }
   var y=new Date().getFullYear();
   var cur=st.goals.anio[y]!=null?st.goals.anio[y]:META_FIN;
   var raw=prompt('Meta de peso para fin de '+y+' (kg):', cur);
@@ -1549,7 +1690,7 @@ var NORTE_SVG='<svg viewBox="0 0 390 300" role="img" aria-label="El cuerpo que s
 '<line x1="148" y1="120" x2="176" y2="152" stroke="#EE6C2B" stroke-width="1" opacity=".35"/>'+
 '<line x1="242" y1="120" x2="214" y2="152" stroke="#EE6C2B" stroke-width="1" opacity=".35"/>'+
 '<polyline points="168,192 195,214 222,192" fill="none" stroke="#EE6C2B" stroke-width="1.5" opacity=".45"/>'+
-'<text x="344" y="272" text-anchor="end" font-size="46" font-weight="bold" fill="url(#gh)" font-family="Consolas,monospace">84</text>'+
+'<text x="344" y="272" text-anchor="end" font-size="46" font-weight="bold" fill="url(#gh)" font-family="Consolas,monospace">{{META}}</text>'+
 '<text x="344" y="286" text-anchor="end" font-size="9" letter-spacing="3" fill="#94897C" font-family="Segoe UI,Arial">HOMBROS ANCHOS · CINTURA ESTRECHA</text>'+
 '</svg>';
 function fotoRender(){
@@ -1560,7 +1701,7 @@ function fotoRender(){
       '<div class="overlay">ESTO ES LO QUE ESTAMOS FORJANDO</div>';
   } else {
     box.className='foto-box tiene';
-    box.innerHTML=NORTE_SVG.replace('>84<','>'+META_FIN+'<')+
+    box.innerHTML=NORTE_SVG.replace('{{META}}',META_FIN?Math.round(META_FIN):'?')+
       '<div class="overlay">LA ESTRUCTURA QUE FORJAMOS · toca CAMBIAR para tu foto real</div>';
   }
 }
