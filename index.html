@@ -754,6 +754,76 @@ function storageOk(){
   }catch(e){ /* link corrupto: se ignora y la app abre normal */ }
 })();
 
+/* MEZCLA por link: .../#m=<base64 de un objeto PARCIAL>
+   A diferencia de #d, este NO reemplaza: añade y actualiza sin borrar nada.
+   Es lo que permite que lo conversado con Forja entre a la app sin pisar
+   lo que se registró en el teléfono. Solo suma; nunca quita. */
+var MERGE_INFO=null;
+(function(){
+  var m=(location.hash||'').match(/[#&]m=([^&]+)/);
+  if(!m) return;
+  try{
+    var json=decodeURIComponent(escape(atob(decodeURIComponent(m[1]))));
+    var inc=JSON.parse(json);
+    var raw=localStorage.getItem(KEY);
+    var base=raw?JSON.parse(raw):{};
+    if(raw){ try{ localStorage.setItem(PREV_KEY, raw); }catch(e3){} }  /* deshacer */
+    var res={pesos:0, medidas:0, habitos:0, ejerc:0, otros:0};
+
+    /* listas por fecha: reemplaza el registro del mismo día, o lo agrega */
+    function porFecha(campo){
+      if(!inc[campo]||!inc[campo].length) return 0;
+      base[campo]=base[campo]||[];
+      var n=0;
+      inc[campo].forEach(function(r){
+        var i=base[campo].map(function(x){return x.d}).indexOf(r.d);
+        if(i>=0) base[campo][i]=r; else base[campo].push(r);
+        n++;
+      });
+      return n;
+    }
+    res.pesos=porFecha('weights');
+    res.medidas=porFecha('medidas');
+
+    /* hábitos: mezcla POR CLAVE — no borra los check-ins que ya estaban */
+    if(inc.habits){
+      base.habits=base.habits||{};
+      Object.keys(inc.habits).forEach(function(f){
+        base.habits[f]=base.habits[f]||{};
+        Object.keys(inc.habits[f]).forEach(function(k){ base.habits[f][k]=inc.habits[f][k]; });
+        res.habitos++;
+      });
+    }
+    /* ejercicios hechos: unión, sin duplicar */
+    if(inc.ejerc){
+      base.ejerc=base.ejerc||{};
+      Object.keys(inc.ejerc).forEach(function(f){
+        var a=base.ejerc[f]||[];
+        inc.ejerc[f].forEach(function(n){ if(a.indexOf(n)<0) a.push(n); });
+        base.ejerc[f]=a; res.ejerc++;
+      });
+    }
+    /* objetos de configuración: mezcla superficial de los campos presentes */
+    ['perfil','plan','carga'].forEach(function(o){
+      if(!inc[o]) return;
+      base[o]=base[o]||{};
+      Object.keys(inc[o]).forEach(function(k){ base[o][k]=inc[o][k]; });
+      res.otros++;
+    });
+    if(inc.goals){
+      base.goals=base.goals||{mes:{},anio:{}};
+      ['mes','anio'].forEach(function(g){
+        if(!inc.goals[g]) return;
+        base.goals[g]=base.goals[g]||{};
+        Object.keys(inc.goals[g]).forEach(function(k){ base.goals[g][k]=inc.goals[g][k]; res.otros++; });
+      });
+    }
+    localStorage.setItem(KEY, JSON.stringify(base));
+    history.replaceState(null,'',location.pathname);
+    MERGE_INFO=res;
+  }catch(e){ /* link corrupto: se ignora */ }
+})();
+
 var st=cargar();
 guardar();
 
@@ -764,6 +834,21 @@ if(recuperadoDe){
     'tu respaldo automático del <b>'+recuperadoDe+'</b>. La foto del norte no viaja en el '+
     'respaldo — si falta, vuelve a ponerla. Toca este aviso para cerrarlo.';
   avR.onclick=function(){ avR.style.display='none'; };
+}
+
+/* confirmación de lo que entró por el link de mezcla */
+if(MERGE_INFO){
+  var p=[];
+  if(MERGE_INFO.pesos)   p.push(MERGE_INFO.pesos+' peso'+(MERGE_INFO.pesos>1?'s':''));
+  if(MERGE_INFO.medidas) p.push(MERGE_INFO.medidas+' medición'+(MERGE_INFO.medidas>1?'es':''));
+  if(MERGE_INFO.habitos) p.push(MERGE_INFO.habitos+' día'+(MERGE_INFO.habitos>1?'s':'')+' de hábitos');
+  if(MERGE_INFO.ejerc)   p.push(MERGE_INFO.ejerc+' día'+(MERGE_INFO.ejerc>1?'s':'')+' de ejercicios');
+  if(MERGE_INFO.otros)   p.push(MERGE_INFO.otros+' ajuste'+(MERGE_INFO.otros>1?'s':''));
+  var avM=document.getElementById('avisoRecuperado');
+  avM.style.display='block';
+  avM.innerHTML='<b>⚒ Datos agregados:</b> '+(p.length?p.join(' · '):'nada nuevo')+'.<br>'+
+    'Se <b>sumaron</b> a lo que ya tenías — no se borró nada. Toca para cerrar.';
+  avM.onclick=function(){ avM.style.display='none'; };
 }
 
 function pesos(){ return st.weights.slice().sort(function(x,y){return x.d<y.d?-1:1}); }
