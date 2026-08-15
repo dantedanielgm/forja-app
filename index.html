@@ -51,6 +51,11 @@
   .cm-ok{color:var(--chispa); font-weight:900}
   .cm-mal{color:#FF9A6B; font-weight:900}
   .cm-extra{font-size:11px; color:var(--ceniza); margin-top:3px}
+  /* EL PLAN — separadores de sección */
+  .pl-sec{font-size:9.5px; font-weight:900; letter-spacing:2px; color:var(--brasa);
+    border-top:1px solid var(--hierro); padding-top:9px; margin:9px 0 4px}
+  .pl-sec:first-of-type{border-top:none; padding-top:0; margin-top:0}
+
   /* SELECTOR DE DÍA DEL CHECK-IN */
   .fnav{display:flex; align-items:center; gap:7px; margin-bottom:11px}
   .fnav button{background:var(--carbon); border:1.5px solid var(--hierro); color:var(--brasa);
@@ -640,15 +645,33 @@
 
   <!-- EL PLAN — la jornada completa, legible para toda la familia -->
   <section class="card">
-    <p class="tit">El plan <small>JORNADA L-V</small></p>
-    <div class="mes-fila"><span class="mk num">5:30</span><span class="mv">Despertar (mar·jue) · luz + agua + café</span></div>
-    <div class="mes-fila"><span class="mk num">6:00</span><span class="mv">Gym 45 min (mar·jue) · resto de días despertar 6:30</span></div>
-    <div class="mes-fila"><span class="mk num">7:00</span><span class="mv">Trabajo — bloque cerrado hasta las 7 pm · pausas cada 90 min</span></div>
-    <div class="mes-fila"><span class="mk num">7:00 pm</span><span class="mv">Cena (½ carbo, ×2 proteína) + familia</span></div>
-    <div class="mes-fila"><span class="mk num">8:45</span><span class="mv">Cuento de la pequeña — el ritual de cierre</span></div>
-    <div class="mes-fila"><span class="mk num">~9:45</span><span class="mv"><b style="color:var(--brasa)">Dormido</b> · ~8 horas</span></div>
-    <div class="mes-fila"><span class="mk">FINDE</span><span class="mv">Sáb: circuito AM · dormir 11:30 máx · Dom: dormido 10:30</span></div>
-    <div class="mes-fila"><span class="mk">COMIDA</span><span class="mv">Proteína 130g/día · snack 5-6pm solo proteína · 1 gustito/día el finde</span></div>
+    <p class="tit">El plan <small id="planFase">EL ESQUELETO + LA SEMANA</small></p>
+
+    <div class="pl-sec">EL ESQUELETO · TODOS LOS DÍAS</div>
+    <div class="mes-fila"><span class="mk num">despertar</span><span class="mv"><b>Peso</b> · luz · vaso de agua · café</span></div>
+    <div class="mes-fila"><span class="mk num">7am-7pm</span><span class="mv">Trabajo · alarmas <b>8:30 · 10 · 11:30 · 1 · 2:30 · 4 · 5:30</b></span></div>
+    <div class="mes-fila"><span class="mk">EN CADA UNA</span><span class="mv">10 chin tucks · marco de puerta 20 s · lengua al paladar <span style="color:var(--ceniza)">(90 seg)</span></span></div>
+    <div class="mes-fila"><span class="mk num">7-8am</span><span class="mv">Desayuno · <span class="mk">1-2pm</span> Almuerzo</span></div>
+    <div class="mes-fila"><span class="mk num">5-6pm</span><span class="mv"><b>Snack de proteína</b> — no es opcional</span></div>
+    <div class="mes-fila"><span class="mk num">7:30pm</span><span class="mv">Cena apenas llegas · <b>la cocina cierra después</b></span></div>
+    <div class="mes-fila"><span class="mk num">8:45</span><span class="mv">Cuento de tu hija — el ritual de cierre</span></div>
+    <div class="mes-fila"><span class="mk num">9:45-10</span><span class="mv"><b style="color:var(--brasa)">Dormido</b> · ~8 horas</span></div>
+
+    <div class="pl-sec">LA SEMANA · AHORA</div>
+    <div class="mes-fila"><span class="mk">LUN</span><span class="mv">Peso + <b>cintura</b> · check-in</span></div>
+    <div class="mes-fila"><span class="mk">MAR</span><span class="mv"><b style="color:var(--brasa)">GYM 6:00-6:45</b> — espalda y postura <span style="color:var(--ceniza)">(despiertas 5:30)</span></span></div>
+    <div class="mes-fila"><span class="mk">JUE</span><span class="mv"><b style="color:var(--brasa)">GYM 6:00-6:45</b> — piernas, glúteos y hombros</span></div>
+    <div class="mes-fila"><span class="mk">SÁB</span><span class="mv">Circuito de casa AM, 25 min — donde estés</span></div>
+    <div class="mes-fila"><span class="mk">DOM</span><span class="mv">Prep dominical · <b>EXPORTAR</b> respaldo · dormido 10:30</span></div>
+    <div class="mes-fila"><span class="mk">DÍA 1</span><span class="mv">Medición completa + <b>foto de perfil</b></span></div>
+
+    <div class="pl-sec">EL DESTINO · CUANDO LA META LLEGUE A 20</div>
+    <div class="mes-fila"><span class="mk">L·M·J·V</span><span class="mv">Gym A/B alternado · 5 ejercicios · cada grupo 2×/semana</span></div>
+    <div class="mes-fila"><span class="mk">SÁB·DOM</span><span class="mv"><b style="color:var(--chispa)">Libres — 100% familia</b></span></div>
+
+    <div class="pl-sec">COMIDA</div>
+    <div class="mes-fila"><span class="mk">SIEMPRE</span><span class="mv">Proteína <b>130 g/día</b> · un solo carbohidrato por plato</span></div>
+    <div class="mes-fila"><span class="mk">FINDE</span><span class="mv">1 gustito por día, elegido antes · despertar máx 1.5 h más tarde</span></div>
   </section>
 
   <!-- PERFIL — hace que la app sirva a cualquier persona -->
