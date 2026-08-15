@@ -462,6 +462,11 @@
       <input id="musInput" type="number" step="0.5" min="30" max="100" inputmode="decimal" placeholder="Muslo (cm)">
       <input id="cadInput" type="number" step="0.5" min="60" max="180" inputmode="decimal" placeholder="Cadera (cm)" style="display:none">
     </div>
+    <!-- POSTURA: los dos que miden la cabeza adelantada y lo que se recupera -->
+    <div class="peso-row" id="medPost" style="display:none">
+      <input id="nucInput" type="number" step="0.5" min="0" max="20" inputmode="decimal" placeholder="Nuca-pared (cm)">
+      <input id="altInput" type="number" step="0.5" min="120" max="220" inputmode="decimal" placeholder="Estatura (cm)">
+    </div>
     <button class="btn2" id="btnMedMas" style="width:100%; margin-bottom:10px">+ MEDICIÓN COMPLETA</button>
     <div id="medBody" class="rut-desc">Cintura al ombligo (relajado) · cuello bajo la nuez.<br>Con ambas calculo tu % de grasa estimado.</div>
   </section>
@@ -1069,7 +1074,10 @@ var ZONAS=[
   {n:'ESPALDA', min:6, re:/jal[óo]n|remo/i},
   {n:'HOMBROS', min:6, re:/lateral|face pull/i},
   {n:'PIERNAS', min:6, re:/prensa|gl[úu]teo|rumano|sentadilla/i},
-  {n:'CORE',    min:3, re:/plancha/i}
+  {n:'CORE',    min:3, re:/plancha/i},
+  /* POSTURA: carga baja, frecuencia alta. Por eso el mínimo es mayor —
+     no se trata de fatigar el músculo sino de repetir el patrón. */
+  {n:'POSTURA', min:12, re:/chin tuck|face pull|tor[áa]cica|remo/i}
 ];
 function zonas(lun){
   var hechos=[];
@@ -1260,6 +1268,32 @@ function caminos(){
     filaRatio('HOMBROS','hom',2,'⚒ <b>Elevaciones laterales · face pull · jalón al pecho</b> + proteína');
     filaRatio('BRAZO','bra',3,'⚒ <b>Jalón y remo</b> (el bíceps trabaja en los dos) + proteína');
     filaRatio('MUSLO','mus',3,'⚒ <b>Prensa de piernas · peso muerto rumano · puente de glúteos</b>');
+
+    /* POSTURA — el camino del cuello. Distancia nuca-pared: baja hasta ≤2 cm.
+       Es el único marcador que NO depende de la grasa: es alineación pura.
+       Trabajo postural = carga baja y FRECUENCIA ALTA (no necesita descanso). */
+    var priN=ms.filter(function(m){return m.nuc!=null})[0];
+    var ultN=null; for(var q=ms.length-1;q>=0;q--){ if(ms[q].nuc!=null){ ultN=ms[q]; break; } }
+    if(priN&&ultN) fila('NUCA-PARED', ultN.nuc, 2, priN.nuc, 1, ' cm', false,
+      '⚒ <b>Chin tucks 3×10 y extensión torácica ×10 — DIARIOS</b> · face pull y remo 2×/sem · '+
+      'estiramiento en marco de puerta 20 seg varias veces al día.<br>'+
+      '<b>Y el 70%: la pantalla con el borde superior a la altura de los ojos.</b>');
+
+    /* ESTATURA — lo que se RECUPERA al desplegar la curva. No es crecer:
+       es dejar de perder altura plegada en la joroba. 1-3 cm es realista. */
+    var priA=ms.filter(function(m){return m.alt!=null})[0];
+    var ultA=null; for(var r=ms.length-1;r>=0;r--){ if(ms[r].alt!=null){ ultA=ms[r]; break; } }
+    if(priA&&ultA){
+      var da=ultA.alt-priA.alt;
+      filas.push('<div class="cm-fila">'+
+        '<div class="cm-top"><span class="cm-k">ESTATURA</span>'+
+        '<span class="cm-v num"><s>'+priA.alt.toFixed(1)+'</s> → <b>'+ultA.alt.toFixed(1)+'</b> cm'+
+        (Math.abs(da)>0.05?' <span class="'+(da>0?'cm-ok':'')+'">('+(da>0?'+':'')+da.toFixed(1)+')</span>':'')+'</span></div>'+
+        '<div class="cm-pct"><span>recuperable con postura: <b>1 a 3 cm</b></span>'+
+        '<span>'+(da>=1?'<span class="cm-ok">+'+da.toFixed(1)+' RECUPERADOS ⚑</span>':'')+'</span></div>'+
+        '<div class="cm-como">📏 <b>Siempre en la mañana</b>, misma pared — de noche mides 1-2 cm menos '+
+        'por compresión de los discos, y eso es normal. Sube con lo mismo que baja la nuca-pared.</div></div>');
+    }
 
     /* CUELLO — informativo, sin barra: es INSUMO de la fórmula, no una meta.
        Baja con la grasa y eso está bien. "Tener cuello" se gana con menos
@@ -1480,6 +1514,7 @@ function curvas(ms){
 /* la fila extra se abre sola cuando toca la completa del mes */
 function medExtraVisible(v){
   document.getElementById('medExtra').style.display=v?'':'none';
+  document.getElementById('medPost').style.display=v?'':'none';
   document.getElementById('btnMedMas').textContent=v?'– SOLO CINTURA Y CUELLO':'+ MEDICIÓN COMPLETA';
 }
 document.getElementById('btnMedMas').onclick=function(){
@@ -1489,20 +1524,25 @@ document.getElementById('btnMed').onclick=function(){
   function val(id){ var v=parseFloat(document.getElementById(id).value); return isNaN(v)?null:v; }
   var cin=val('cinInput'), cue=val('cueInput'), cad=val('cadInput');
   var hom=val('homInput'), bra=val('braInput'), mus=val('musInput');
+  var nuc=val('nucInput'), alt=val('altInput');
   if(!cin||!cue||cin<50||cin>180||cue<20||cue>70){ alert('Cintura 50-180 · Cuello 20-70 (cm)'); return; }
   if(st.perfil.sexo==='M'&&(!cad||cad<60||cad>180)){ alert('Falta la cadera (60-180 cm) — la fórmula de mujer la necesita'); return; }
   if(hom!=null&&(hom<70||hom>180)){ alert('Hombros 70-180 cm'); return; }
   if(bra!=null&&(bra<15||bra>70)){ alert('Brazo 15-70 cm'); return; }
   if(mus!=null&&(mus<30||mus>100)){ alert('Muslo 30-100 cm'); return; }
+  if(nuc!=null&&(nuc<0||nuc>20)){ alert('Nuca-pared 0-20 cm'); return; }
+  if(alt!=null&&(alt<120||alt>220)){ alert('Estatura 120-220 cm'); return; }
   var hoy=hoyStr(), reg={d:hoy,cin:cin,cue:cue};
   if(cad) reg.cad=cad;
   if(hom!=null) reg.hom=hom;
   if(bra!=null) reg.bra=bra;
   if(mus!=null) reg.mus=mus;
+  if(nuc!=null) reg.nuc=nuc;
+  if(alt!=null) reg.alt=alt;
   st.medidas=st.medidas.filter(function(x){return x.d!==hoy});
   st.medidas.push(reg);
   guardar();
-  ['cinInput','cueInput','cadInput','homInput','braInput','musInput'].forEach(function(id){
+  ['cinInput','cueInput','cadInput','homInput','braInput','musInput','nucInput','altInput'].forEach(function(id){
     document.getElementById(id).value=''; });
   medExtraVisible(false);
   render();
