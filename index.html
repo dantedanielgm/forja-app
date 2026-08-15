@@ -51,6 +51,22 @@
   .cm-ok{color:var(--chispa); font-weight:900}
   .cm-mal{color:#FF9A6B; font-weight:900}
   .cm-extra{font-size:11px; color:var(--ceniza); margin-top:3px}
+  /* REJILLA SEMANAL DE EJERCICIOS */
+  .sem-tit{font-size:9.5px; font-weight:900; letter-spacing:1.8px; color:var(--ceniza);
+    border-top:1px solid var(--hierro); padding-top:11px; margin:12px 0 7px}
+  .sem-g{width:100%; border-collapse:collapse}
+  .sem-g th{font-size:9.5px; font-weight:900; color:var(--ceniza); letter-spacing:.5px;
+    padding:0 0 5px; text-align:center}
+  .sem-g th.hoy{color:var(--brasa)}
+  .sem-g td{padding:3px 0; text-align:center}
+  .sem-g td.nm{text-align:left; font-size:11.5px; font-weight:600; color:var(--hueso);
+    max-width:104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:5px}
+  .sem-c{width:24px; height:24px; border:1.5px solid var(--hierro); background:var(--carbon);
+    border-radius:50%; padding:0; color:transparent; font-size:11px; font-weight:900}
+  .sem-c.on{background:var(--brasa); border-color:var(--brasa); color:var(--carbon)}
+  .sem-c:disabled{opacity:.25}
+  .sem-c.hoycol{border-color:#4E4438}
+
   /* EL PLAN — separadores de sección */
   .pl-sec{font-size:9.5px; font-weight:900; letter-spacing:2px; color:var(--brasa);
     border-top:1px solid var(--hierro); padding-top:9px; margin:9px 0 4px}
@@ -500,6 +516,10 @@
     <div id="cargaLista" class="rut-desc" style="margin-top:9px"></div>
     <!-- VOLUMEN POR ZONA: el mínimo que PROTEGE el músculo, para no tener
          que reaccionar cuando una medida baje. Prevención, no reacción. -->
+    <!-- LA SEMANA COMPLETA: marcar cualquier ejercicio en cualquier día.
+         Un entreno de hace tres días no se pierde por no haberlo marcado. -->
+    <div class="sem-tit">ESTA SEMANA · TOCA PARA MARCAR CUALQUIER DÍA</div>
+    <div id="semanaEj"></div>
     <div id="zonasBody" style="margin-top:12px"></div>
   </section>
 
@@ -1279,7 +1299,7 @@ function carga(){
     var a=st.ejerc[hoyStr(new Date(lun.getTime()+i*864e5))];
     if(a) a.forEach(function(n){ if(lista.indexOf(n)<0) lista.push(n); });
   }
-  zonas(lun);
+  zonas(lun); semanaEjerc();
   document.getElementById('cargaLista').innerHTML=lista.length
     ? 'Esta semana: <b style="color:var(--hueso)">'+lista.join(' · ')+'</b>'
     : 'Marca el círculo de cualquier ejercicio de abajo. <b style="color:var(--chispa)">Uno basta para arrancar.</b>';
@@ -1315,6 +1335,45 @@ function zonas(lun){
       '<span class="zn-v num"><b>'+series+'</b>/'+z.min+(ok?' <span class="ok">✓</span>':'')+'</span></div>';
   });
   document.getElementById('zonasBody').innerHTML=html;
+}
+/* ---- REJILLA SEMANAL DE EJERCICIOS ----
+   El check-in ya permite completar días pasados uno por uno, pero para el
+   entrenamiento eso es lento. Aquí se ve la semana entera y se marca
+   cualquier ejercicio en cualquier día de un toque. */
+function semanaEjerc(){
+  var el=document.getElementById('semanaEj');
+  var lun=lunesDe(new Date()), hoy=hoyStr();
+  var fechas=[]; for(var i=0;i<7;i++) fechas.push(hoyStr(new Date(lun.getTime()+i*864e5)));
+  var pool=poolCompleto();
+  var html='<table class="sem-g"><tr><th></th>'+
+    fechas.map(function(f){
+      return '<th class="'+(f===hoy?'hoy':'')+'">'+['L','M','X','J','V','S','D'][fechas.indexOf(f)]+'</th>';
+    }).join('')+'</tr>';
+  pool.forEach(function(x,r){
+    var nom=limpiaNom(x[0]);
+    html+='<tr><td class="nm" title="'+nom+'">'+nom+'</td>'+
+      fechas.map(function(f,c){
+        var on=(st.ejerc[f]||[]).indexOf(nom)>=0;
+        var fut=f>hoy;
+        return '<td><button class="sem-c'+(on?' on':'')+(f===hoy?' hoycol':'')+'"'+
+          (fut?' disabled':'')+' data-f="'+f+'" data-n="'+r+'" aria-label="'+nom+' '+f+'">✓</button></td>';
+      }).join('')+'</tr>';
+  });
+  el.innerHTML=html+'</table>';
+  [].slice.call(el.querySelectorAll('.sem-c:not(:disabled)')).forEach(function(b){
+    b.onclick=function(){ tocaEjercEn(limpiaNom(pool[+b.dataset.n][0]), b.dataset.f); };
+  });
+}
+/* marca/desmarca un ejercicio en una fecha concreta */
+function tocaEjercEn(nom, f){
+  if(!st.ejerc[f]) st.ejerc[f]=[];
+  var i=st.ejerc[f].indexOf(nom);
+  if(i<0) st.ejerc[f].push(nom); else st.ejerc[f].splice(i,1);
+  if(!st.ejerc[f].length) delete st.ejerc[f];
+  if(!st.habits[f]) st.habits[f]={};
+  st.habits[f].e=(st.ejerc[f]&&st.ejerc[f].length)?1:0;
+  if(!st.habits[f].e&&!Object.keys(st.habits[f]).some(function(x){return st.habits[f][x]})) delete st.habits[f];
+  guardar(); render();
 }
 function tocaEjerc(nom){
   var hoy=fechaEdit;                /* también se puede completar un día pasado */
@@ -1478,9 +1537,12 @@ function lectura(){
       '<li>Al piso, antebrazos y puntas de pie, cuerpo recto.</li>'+
       '<li>20 segundos. Descansa. Otras dos veces.</li>'+
       '<li>Listo: tu semana deja de estar en cero.</li></ol>'+
-      '<button class="btn" data-acc="plancha">MARCAR PLANCHA DE HOY ⚒</button>',
-    pocos_ejercicios:'<b>Cualquiera del pool cuenta</b> — no tiene que ser la sesión completa.'+
-      '<button class="btn" data-acc="entreno">IR A ENTRENO DE HOY</button>',
+      '<b>¿Ya entrenaste algún día y no lo marcaste?</b> En la rejilla semanal '+
+      'marcas cualquier ejercicio en cualquier día.'+
+      '<button class="btn" data-acc="semana">ABRIR LA SEMANA Y MARCAR ⚒</button>',
+    pocos_ejercicios:'<b>Cualquiera del pool cuenta</b> — no tiene que ser la sesión completa.<br>'+
+      'Y si entrenaste algún día sin marcarlo, la rejilla semanal lo arregla.'+
+      '<button class="btn" data-acc="semana">ABRIR LA SEMANA Y MARCAR</button>',
     sueno:'<b>Tu palanca más fuerte, y es gratis.</b><ol>'+
       '<li>El cuento de tu hija a las 8:45: <b>si te duermes ahí, ese ES el plan.</b></li>'+
       '<li>Última cafeína a las <b>2-3 pm</b>.</li>'+
@@ -1565,7 +1627,7 @@ function lectura(){
     b.onclick=function(ev){
       ev.stopPropagation();
       var a=b.dataset.acc;
-      if(a==='plancha'){ fechaEdit=hoyStr(); tocaEjerc('Plancha'); }
+      if(a==='semana'){ document.getElementById('semanaEj').scrollIntoView({behavior:'smooth',block:'center'}); }
       else if(a==='entreno'){ document.getElementById('entrenoCard').scrollIntoView({behavior:'smooth'}); }
       else if(a==='pasado'){
         fechaEdit=hoyStr(pd(hoyStr()).getTime?new Date(pd(hoyStr()).getTime()-864e5):new Date());
