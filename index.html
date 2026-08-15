@@ -50,6 +50,22 @@
   .cm-ok{color:var(--chispa); font-weight:900}
   .cm-mal{color:#FF9A6B; font-weight:900}
   .cm-extra{font-size:11px; color:var(--ceniza); margin-top:3px}
+  /* GUÍA DE MEDICIÓN — dentro de la app, no en un documento aparte */
+  .guia{margin-bottom:11px}
+  .gu-regla{font-size:12px; line-height:1.5; color:var(--ceniza); background:var(--carbon);
+    border-left:2px solid var(--chispa); padding:8px 10px; margin-bottom:9px}
+  .gu-regla b{color:var(--hueso)}
+  .gu-it{font-size:12.5px; line-height:1.5; color:var(--ceniza);
+    padding:8px 0; border-bottom:1px solid var(--hierro)}
+  .gu-it:last-child{border-bottom:none}
+  .gu-it b{color:var(--hueso)}
+  .gu-n{display:flex; justify-content:space-between; align-items:center; gap:8px;
+    font-size:11px; font-weight:900; letter-spacing:1.5px; color:var(--brasa); margin-bottom:3px}
+  .gu-f{font-style:normal; font-size:9.5px; font-weight:900; letter-spacing:1px;
+    padding:2px 7px; flex:none}
+  .gu-f.diaria{background:var(--brasa); color:var(--carbon)}
+  .gu-f.semanal{background:#3A3126; color:var(--chispa)}
+  .gu-f.mensual{background:var(--hierro); color:var(--ceniza)}
   /* VOLUMEN POR ZONA */
   .zn-tit{font-size:10px; font-weight:900; letter-spacing:2px; color:var(--ceniza);
     border-top:1px solid var(--hierro); padding-top:10px; margin-bottom:7px}
@@ -468,6 +484,44 @@
       <input id="altInput" type="number" step="0.5" min="120" max="220" inputmode="decimal" placeholder="Estatura (cm)">
     </div>
     <button class="btn2" id="btnMedMas" style="width:100%; margin-bottom:10px">+ MEDICIÓN COMPLETA</button>
+    <button class="btn2" id="btnComoMedir" style="width:100%; margin-bottom:10px">📏 CÓMO SE MIDE CADA UNA</button>
+    <div id="comoMedir" class="guia" style="display:none">
+      <div class="gu-regla">Cinta de costura · <b>en ayunas, apenas te levantas</b> · relajado, sin meter panza ·
+        ni apretada ni floja.<br><b>La consistencia vale más que la exactitud:</b> si mides siempre igual,
+        los cambios son reales aunque el número absoluto esté algo corrido.</div>
+
+      <div class="gu-it"><span class="gu-n">PESO<i class="gu-f diaria">DIARIO</i></span>
+        Al despertar, después del baño, misma balanza, sin ropa.</div>
+
+      <div class="gu-it"><span class="gu-n">CINTURA<i class="gu-f semanal">LUNES</i></span>
+        A la altura del <b>ombligo</b>, de pie, relajado. Cinta horizontal, sin apretar.
+        <b>No metas panza</b> — el dato honesto es el que sirve.</div>
+
+      <div class="gu-it"><span class="gu-n">CUELLO<i class="gu-f mensual">DÍA 1</i></span>
+        Justo <b>debajo de la nuez</b>, en la parte más angosta. La cinta baja levemente hacia adelante.</div>
+
+      <div class="gu-it"><span class="gu-n">HOMBROS<i class="gu-f mensual">DÍA 1</i></span>
+        Alrededor de la <b>parte más ancha</b>, brazos sueltos a los lados. Cinta horizontal.</div>
+
+      <div class="gu-it"><span class="gu-n">BRAZO<i class="gu-f mensual">DÍA 1</i></span>
+        Bíceps <b>relajado</b> (brazo colgando), en el punto medio entre hombro y codo.</div>
+
+      <div class="gu-it"><span class="gu-n">MUSLO<i class="gu-f mensual">DÍA 1</i></span>
+        Punto medio entre cadera y rodilla, de pie, con el peso repartido en ambas piernas.</div>
+
+      <div class="gu-it"><span class="gu-n">NUCA-PARED<i class="gu-f mensual">DÍA 1</i></span>
+        Talones a <b>5 cm</b> de la pared · glúteos y espalda alta tocando · <b>mentón nivelado</b>
+        (ojos al horizonte, sin levantarlo). Mide de la nuca a la pared con una regla.
+        <b>Objetivo: 2 cm o menos.</b></div>
+
+      <div class="gu-it"><span class="gu-n">ESTATURA<i class="gu-f mensual">DÍA 1</i></span>
+        Misma pared, talones juntos, mirada al frente. Marca con lápiz y mide desde el piso.
+        <b>Siempre en la mañana</b> — de noche mides 1-2 cm menos y es normal.</div>
+
+      <div class="gu-it"><span class="gu-n">FOTO DE PERFIL<i class="gu-f mensual">DÍA 1</i></span>
+        De pie relajado, de costado, misma pared y misma luz. La cabeza adelantada
+        <b>no se juzga en el espejo</b> — salta a la vista en una foto de perfil.</div>
+    </div>
     <div id="medBody" class="rut-desc">Cintura al ombligo (relajado) · cuello bajo la nuez.<br>Con ambas calculo tu % de grasa estimado.</div>
   </section>
 
@@ -1519,6 +1573,11 @@ function medExtraVisible(v){
 }
 document.getElementById('btnMedMas').onclick=function(){
   medExtraVisible(document.getElementById('medExtra').style.display==='none');
+};
+document.getElementById('btnComoMedir').onclick=function(){
+  var g=document.getElementById('comoMedir'), abierta=g.style.display!=='none';
+  g.style.display=abierta?'none':'block';
+  this.textContent=abierta?'📏 CÓMO SE MIDE CADA UNA':'✕ CERRAR LA GUÍA';
 };
 document.getElementById('btnMed').onclick=function(){
   function val(id){ var v=parseFloat(document.getElementById(id).value); return isNaN(v)?null:v; }
