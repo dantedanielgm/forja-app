@@ -77,6 +77,16 @@
   .lec-ok .lec-ic{color:var(--chispa)}
   .lec-warn .lec-ic{color:#FF9A6B}
   .lec-info .lec-ic{color:var(--ceniza)}
+  .lec-it.tiene{cursor:pointer}
+  .lec-it.tiene .lec-tx::after{content:' ▾'; color:var(--brasa); font-weight:900}
+  .lec-it.tiene.abierto .lec-tx::after{content:' ▴'}
+  .lec-fix{display:none; margin:0 0 4px 26px; padding:10px 12px; background:var(--carbon);
+    border-left:2px solid var(--brasa); font-size:12.5px; line-height:1.55; color:var(--ceniza)}
+  .lec-fix.abierto{display:block}
+  .lec-fix b{color:var(--hueso)}
+  .lec-fix ol{margin:5px 0 0; padding-left:18px}
+  .lec-fix li{margin-bottom:4px}
+  .lec-fix .btn{width:100%; margin-top:9px; padding:9px}
 
   /* GUÍA DE MEDICIÓN — dentro de la app, no en un documento aparte */
   .guia{margin-bottom:11px}
@@ -1423,25 +1433,59 @@ function lectura(){
   var techo=g!=null?ritmoMaxSeguro(g):0.9;
   var lun=lunesDe(new Date()), hechos=cuentaSemana(lun);
 
+  /* CADA AVISO TRAE SU ARREGLO. No basta con decir qué está mal:
+     se abre ahí mismo el qué hacer, y cuando se puede, el botón que lo hace. */
+  var RUTA130='<b>La ruta de los 130 g:</b><ol>'+
+    '<li>Desayuno: 3 huevos → <b>19 g</b></li>'+
+    '<li>Almuerzo: palma de pollo/pescado → <b>35 g</b></li>'+
+    '<li>Snack 5-6 pm: atún o whey → <b>25 g</b></li>'+
+    '<li>Cena: 2 panes con proteína real → <b>30 g</b></li>'+
+    '<li>Whey extra si falta → <b>24 g</b></li></ol>';
+  var FIX={
+    ritmo_borde:'<b>No recortes comida — el déficit ya alcanza.</b><ol>'+
+      '<li>Sube la proteína a <b>140 g</b> estos días.</li>'+
+      '<li>Si baja más de 1 kg/sem dos semanas seguidas, <b>come 150-200 kcal más</b>, no menos.</li>'+
+      '<li>Duerme 7.5-8 h: con sueño corto, lo que se pierde de más es músculo.</li></ol>'+RUTA130,
+    estancado:'<b>No recortes todavía.</b><ol>'+
+      '<li>El peso diario miente; manda la tendencia de 28 días.</li>'+
+      '<li>Revisa el <b>sodio del fin de semana</b> — retiene agua y tapa la bajada.</li>'+
+      '<li>Revisa la porción de arroz: media, no entera.</li>'+
+      '<li>Si en 3 semanas sigue plano, ahí sí ajustamos comida.</li></ol>',
+    sin_ejercicio:'<b>El más corto que existe: plancha, 2 minutos.</b><ol>'+
+      '<li>Al piso, antebrazos y puntas de pie, cuerpo recto.</li>'+
+      '<li>20 segundos. Descansa. Otras dos veces.</li>'+
+      '<li>Listo: tu semana deja de estar en cero.</li></ol>'+
+      '<button class="btn" data-acc="plancha">MARCAR PLANCHA DE HOY ⚒</button>',
+    pocos_ejercicios:'<b>Cualquiera del pool cuenta</b> — no tiene que ser la sesión completa.'+
+      '<button class="btn" data-acc="entreno">IR A ENTRENO DE HOY</button>',
+    sueno:'<b>Tu palanca más fuerte, y es gratis.</b><ol>'+
+      '<li>El cuento de tu hija a las 8:45: <b>si te duermes ahí, ese ES el plan.</b></li>'+
+      '<li>Última cafeína a las <b>2-3 pm</b>.</li>'+
+      '<li>Corta el grueso del agua a las 8 pm — así no te levantas a orinar.</li>'+
+      '<li>Celular fuera del cuarto.</li></ol>'+
+      '<button class="btn" data-acc="pasado">MARCAR DÍAS QUE SÍ DORMISTE</button>',
+    proteina:RUTA130+'<button class="btn" data-acc="pasado">MARCAR DÍAS QUE SÍ CUMPLISTE</button>'
+  };
+
   /* 1. RITMO contra el techo seguro para SU % de grasa */
   if(kgSem>techo*1.05)
     items.push(['warn','⚠','Bajas <b>'+kgSem.toFixed(2)+' kg/sem</b> y tu techo seguro es <b>'+techo.toFixed(2)+'</b> '+
-      (g!=null?'(al '+g.toFixed(0)+'% de grasa)':'')+'.<span class="acc">Sube proteína — NO recortes más comida.</span>']);
+      (g!=null?'(al '+g.toFixed(0)+'% de grasa)':'')+'.<span class="acc">Sube proteína — NO recortes más comida.</span>', FIX.ritmo_borde]);
   else if(kgSem>techo*0.85)
     items.push(['warn','⚠','Vas a <b>'+kgSem.toFixed(2)+' kg/sem</b>: justo en el borde del techo seguro ('+techo.toFixed(2)+').'+
-      '<span class="acc">No aceleres más. Proteína al día.</span>']);
+      '<span class="acc">No aceleres más. Proteína al día.</span>', FIX.ritmo_borde]);
   else if(kgSem>0.1)
     items.push(['ok','✓','Ritmo <b>'+kgSem.toFixed(2)+' kg/sem</b>, dentro del rango seguro (techo '+techo.toFixed(2)+').']);
   else
-    items.push(['warn','⚠','El peso lleva días sin bajar.<span class="acc">Revisa porciones y sodio antes de recortar nada.</span>']);
+    items.push(['warn','⚠','El peso lleva días sin bajar.<span class="acc">Revisa porciones y sodio antes de recortar nada.</span>', FIX.estancado]);
 
   /* 2. ENTRENAMIENTO — sin estímulo, parte de lo que baja es músculo */
   if(hechos===0)
     items.push(['warn','⚠','<b>0 ejercicios esta semana.</b> Sin estímulo, entre el 20 y 25% de lo que bajas suele ser músculo.'+
-      '<span class="acc">Un solo ejercicio hoy y la zona deja de estar en cero.</span>']);
+      '<span class="acc">Un solo ejercicio hoy y la zona deja de estar en cero.</span>', FIX.sin_ejercicio]);
   else if(hechos<st.carga.meta)
     items.push(['warn','⚠','<b>'+hechos+' de '+st.carga.meta+'</b> ejercicios de tu meta semanal.'+
-      '<span class="acc">Faltan '+(st.carga.meta-hechos)+' para cumplir.</span>']);
+      '<span class="acc">Faltan '+(st.carga.meta-hechos)+' para cumplir.</span>', FIX.pocos_ejercicios]);
   else
     items.push(['ok','✓','<b>'+hechos+' ejercicios</b> esta semana — meta cumplida.']);
 
@@ -1449,7 +1493,7 @@ function lectura(){
   var su=adherencia7(/dorm|cama|sue[ñn]o/i);
   if(su&&su.pct<50)
     items.push(['warn','⚠','"'+su.label+'" solo <b>'+su.n+' de '+su.dias+'</b> días. El sueño corto sesga la pérdida hacia músculo.'+
-      '<span class="acc">Es tu palanca más fuerte y la más barata.</span>']);
+      '<span class="acc">Es tu palanca más fuerte y la más barata.</span>', FIX.sueno]);
   else if(su&&su.pct>=80)
     items.push(['ok','✓','Sueño <b>'+su.n+'/'+su.dias+'</b> — la palanca que más manda, sostenida.']);
 
@@ -1457,7 +1501,7 @@ function lectura(){
   var pr=adherencia7(/prote/i);
   if(pr&&pr.pct<70)
     items.push(['warn','⚠','"'+pr.label+'" solo <b>'+pr.n+' de '+pr.dias+'</b> días.'+
-      '<span class="acc">Es lo único que decide si lo que pierdes es grasa o músculo.</span>']);
+      '<span class="acc">Es lo único que decide si lo que pierdes es grasa o músculo.</span>', FIX.proteina]);
 
   /* 5. EL COMBO CRÍTICO */
   if(kgSem>techo*0.85 && hechos===0)
@@ -1477,9 +1521,36 @@ function lectura(){
       '<b>grasa o músculo</b> — hoy es imposible saberlo con la balanza sola.'
     : 'Mídete cintura y cuello: sin eso no puedo saber si lo que bajas es grasa o músculo.']);
 
-  el.innerHTML=head+items.map(function(i){
-    return '<div class="lec-it lec-'+i[0]+'"><span class="lec-ic">'+i[1]+'</span><span class="lec-tx">'+i[2]+'</span></div>';
+  el.innerHTML=head+items.map(function(i,n){
+    var tiene=!!i[3];
+    return '<div class="lec-it lec-'+i[0]+(tiene?' tiene':'')+'" data-fix="'+n+'">'+
+             '<span class="lec-ic">'+i[1]+'</span><span class="lec-tx">'+i[2]+'</span></div>'+
+           (tiene?'<div class="lec-fix" id="fix'+n+'">'+i[3]+'</div>':'');
   }).join('');
+
+  /* abrir/cerrar el arreglo de cada aviso, ahí mismo */
+  [].slice.call(el.querySelectorAll('.lec-it.tiene')).forEach(function(row){
+    row.onclick=function(){
+      var f=document.getElementById('fix'+row.dataset.fix);
+      var abierto=f.classList.contains('abierto');
+      f.classList.toggle('abierto',!abierto);
+      row.classList.toggle('abierto',!abierto);
+    };
+  });
+  /* botones de acción: hacen el arreglo, no solo lo explican */
+  [].slice.call(el.querySelectorAll('.lec-fix [data-acc]')).forEach(function(b){
+    b.onclick=function(ev){
+      ev.stopPropagation();
+      var a=b.dataset.acc;
+      if(a==='plancha'){ fechaEdit=hoyStr(); tocaEjerc('Plancha'); }
+      else if(a==='entreno'){ document.getElementById('entrenoCard').scrollIntoView({behavior:'smooth'}); }
+      else if(a==='pasado'){
+        fechaEdit=hoyStr(pd(hoyStr()).getTime?new Date(pd(hoyStr()).getTime()-864e5):new Date());
+        render();
+        document.getElementById('fLbl').closest('section').scrollIntoView({behavior:'smooth'});
+      }
+    };
+  });
 }
 
 /* ---- CAMINOS: dónde estoy respecto de CADA objetivo ----
