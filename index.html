@@ -26,6 +26,7 @@
   .wrap > *{order:50}
   #alarmaStorage,#bienvenida,#avisoRecuperado,#hito{order:1}
   #estadoCard{order:10}
+  #lecturaCard{order:15}
   #mesHero{order:20}
   #cierreMes{order:25}
   #caminosCard{order:30}
@@ -50,6 +51,22 @@
   .cm-ok{color:var(--chispa); font-weight:900}
   .cm-mal{color:#FF9A6B; font-weight:900}
   .cm-extra{font-size:11px; color:var(--ceniza); margin-top:3px}
+  /* LECTURA */
+  .lec-hd{font-size:13.5px; line-height:1.5; padding:9px 11px; margin-bottom:10px;
+    border-left:3px solid; background:var(--carbon)}
+  .lec-hd b{font-weight:900}
+  .lec-hd.rojo{border-color:#FF6B4A; color:#FFD9CF} .lec-hd.rojo b{color:#FF9A6B}
+  .lec-hd.oro{border-color:var(--chispa); color:var(--hueso)} .lec-hd.oro b{color:var(--chispa)}
+  .lec-it{display:flex; gap:9px; padding:8px 0; border-bottom:1px solid var(--hierro); font-size:12.5px; line-height:1.45}
+  .lec-it:last-child{border-bottom:none}
+  .lec-ic{flex:none; width:17px; font-size:14px; text-align:center}
+  .lec-tx{flex:1; color:var(--ceniza)}
+  .lec-tx b{color:var(--hueso)}
+  .lec-tx .acc{display:block; margin-top:2px; color:var(--brasa); font-weight:700}
+  .lec-ok .lec-ic{color:var(--chispa)}
+  .lec-warn .lec-ic{color:#FF9A6B}
+  .lec-info .lec-ic{color:var(--ceniza)}
+
   /* GUÍA DE MEDICIÓN — dentro de la app, no en un documento aparte */
   .guia{margin-bottom:11px}
   .gu-regla{font-size:12px; line-height:1.5; color:var(--ceniza); background:var(--carbon);
@@ -417,6 +434,12 @@
     <div class="chips" id="chips"></div>
     <div class="score-hoy" id="scoreHoy"></div>
     <div class="editor" id="editor"></div>
+  </section>
+
+  <!-- LECTURA — la app no solo muestra datos: dice qué significan y qué hacer -->
+  <section class="card" id="lecturaCard">
+    <p class="tit">Lectura <small id="lecturaTag">QUÉ DICEN TUS DATOS</small></p>
+    <div id="lecturaBody"></div>
   </section>
 
   <!-- CAMINOS — dónde estoy respecto de CADA objetivo, no solo del peso -->
@@ -1055,7 +1078,7 @@ function render(){
     }
   }
 
-  fotoRender(); chipsRender(reg); rutina(); carga(); faseRender(); caminos(); medidas(); grafica(); mosaico(); semana(); cierreMes(); rutaRender(); renderMes(); perfilRender(); avisoBackup();
+  fotoRender(); chipsRender(reg); rutina(); carga(); faseRender(); lectura(); caminos(); medidas(); grafica(); mosaico(); semana(); cierreMes(); rutaRender(); renderMes(); perfilRender(); avisoBackup();
 }
 
 /* ---- CARGA SEMANAL ----
@@ -1262,6 +1285,92 @@ function magraDe(m){
   return (g!=null&&p!=null)?p*(1-g/100):null;
 }
 function medsOrd(){ return st.medidas.slice().sort(function(x,y){return x.d<y.d?-1:1}); }
+
+/* ---- LECTURA: la app interpreta, no solo muestra ----
+   Los datos por sí solos no dicen qué hacer. Esto lee el estado completo
+   (ritmo, entrenamiento, sueño, proteína) y da el diagnóstico y la acción. */
+function adherencia7(re){
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
+  var def=st.habitDefs.filter(function(h){return re.test(h.label)})[0];
+  if(!def) return null;
+  var n=0, dias=0;
+  for(var i=0;i<7;i++){
+    var f=new Date(hoy.getTime()-i*864e5);
+    if(!aplicaDia(def,f)) continue;
+    dias++;
+    var r=st.habits[hoyStr(f)];
+    if(r&&r[def.k]) n++;
+  }
+  return dias?{pct:Math.round(n/dias*100), n:n, dias:dias, label:def.label}:null;
+}
+function lectura(){
+  var el=document.getElementById('lecturaBody');
+  var w=pesos(), t=tendencia(), g=grasaHoy();
+  if(w.length<2){ el.innerHTML='<div class="lec-tx">Con dos pesos registrados empiezo a leer tu ritmo.</div>'; return; }
+
+  var items=[], head='';
+  var kgSem=t?-t.m*7:0;                       /* positivo = bajando */
+  var techo=g!=null?ritmoMaxSeguro(g):0.9;
+  var lun=lunesDe(new Date()), hechos=cuentaSemana(lun);
+
+  /* 1. RITMO contra el techo seguro para SU % de grasa */
+  if(kgSem>techo*1.05)
+    items.push(['warn','⚠','Bajas <b>'+kgSem.toFixed(2)+' kg/sem</b> y tu techo seguro es <b>'+techo.toFixed(2)+'</b> '+
+      (g!=null?'(al '+g.toFixed(0)+'% de grasa)':'')+'.<span class="acc">Sube proteína — NO recortes más comida.</span>']);
+  else if(kgSem>techo*0.85)
+    items.push(['warn','⚠','Vas a <b>'+kgSem.toFixed(2)+' kg/sem</b>: justo en el borde del techo seguro ('+techo.toFixed(2)+').'+
+      '<span class="acc">No aceleres más. Proteína al día.</span>']);
+  else if(kgSem>0.1)
+    items.push(['ok','✓','Ritmo <b>'+kgSem.toFixed(2)+' kg/sem</b>, dentro del rango seguro (techo '+techo.toFixed(2)+').']);
+  else
+    items.push(['warn','⚠','El peso lleva días sin bajar.<span class="acc">Revisa porciones y sodio antes de recortar nada.</span>']);
+
+  /* 2. ENTRENAMIENTO — sin estímulo, parte de lo que baja es músculo */
+  if(hechos===0)
+    items.push(['warn','⚠','<b>0 ejercicios esta semana.</b> Sin estímulo, entre el 20 y 25% de lo que bajas suele ser músculo.'+
+      '<span class="acc">Un solo ejercicio hoy y la zona deja de estar en cero.</span>']);
+  else if(hechos<st.carga.meta)
+    items.push(['warn','⚠','<b>'+hechos+' de '+st.carga.meta+'</b> ejercicios de tu meta semanal.'+
+      '<span class="acc">Faltan '+(st.carga.meta-hechos)+' para cumplir.</span>']);
+  else
+    items.push(['ok','✓','<b>'+hechos+' ejercicios</b> esta semana — meta cumplida.']);
+
+  /* 3. SUEÑO — el techo real de la velocidad */
+  var su=adherencia7(/dorm|cama|sue[ñn]o/i);
+  if(su&&su.pct<50)
+    items.push(['warn','⚠','"'+su.label+'" solo <b>'+su.n+' de '+su.dias+'</b> días. El sueño corto sesga la pérdida hacia músculo.'+
+      '<span class="acc">Es tu palanca más fuerte y la más barata.</span>']);
+  else if(su&&su.pct>=80)
+    items.push(['ok','✓','Sueño <b>'+su.n+'/'+su.dias+'</b> — la palanca que más manda, sostenida.']);
+
+  /* 4. PROTEÍNA — lo que protege el músculo */
+  var pr=adherencia7(/prote/i);
+  if(pr&&pr.pct<70)
+    items.push(['warn','⚠','"'+pr.label+'" solo <b>'+pr.n+' de '+pr.dias+'</b> días.'+
+      '<span class="acc">Es lo único que decide si lo que pierdes es grasa o músculo.</span>']);
+
+  /* 5. EL COMBO CRÍTICO */
+  if(kgSem>techo*0.85 && hechos===0)
+    head='<div class="lec-hd rojo"><b>Atención al combo:</b> bajas al límite de lo seguro y no estás entrenando. '+
+         'Esa combinación es la que convierte pérdida de grasa en pérdida de músculo. '+
+         'No hay que bajar más lento — hay que <b>entrenar</b>.</div>';
+  else if(kgSem>0.1 && hechos>=st.carga.meta && su && su.pct>=70)
+    head='<div class="lec-hd oro"><b>Las tres piezas están puestas</b> esta semana: ritmo, entrenamiento y sueño. '+
+         'Así es como lo que baja es grasa y nada más.</div>';
+
+  /* 6. LA PRÓXIMA MEDICIÓN — qué va a revelar */
+  var hoyD=new Date(), finM=new Date(hoyD.getFullYear(),hoyD.getMonth()+1,1);
+  var faltan=dias(hoyD,finM);
+  var ms=medsOrd();
+  items.push(['info','→', ms.length
+    ? 'En <b>'+faltan+' día'+(faltan===1?'':'s')+'</b> toca medición completa. Ahí sabrás si lo que bajaste fue '+
+      '<b>grasa o músculo</b> — hoy es imposible saberlo con la balanza sola.'
+    : 'Mídete cintura y cuello: sin eso no puedo saber si lo que bajas es grasa o músculo.']);
+
+  el.innerHTML=head+items.map(function(i){
+    return '<div class="lec-it lec-'+i[0]+'"><span class="lec-ic">'+i[1]+'</span><span class="lec-tx">'+i[2]+'</span></div>';
+  }).join('');
+}
 
 /* ---- CAMINOS: dónde estoy respecto de CADA objetivo ----
    El peso ya tenía su barra; los demás marcadores no tenían ninguna.
