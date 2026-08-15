@@ -49,6 +49,10 @@
   .cm-pct b{color:var(--hueso)}
   .cm-ok{color:var(--chispa); font-weight:900}
   .cm-mal{color:#FF9A6B; font-weight:900}
+  .cm-extra{font-size:11px; color:var(--ceniza); margin-top:3px}
+  .cm-como{font-size:11.5px; line-height:1.4; color:var(--ceniza); margin-top:6px;
+    padding:6px 9px; background:var(--carbon); border-left:2px solid var(--brasa)}
+  .cm-como b{color:var(--hueso)}
   .cm-vacio{color:var(--ceniza); font-size:13px; line-height:1.55}
 
   header{display:flex; justify-content:space-between; align-items:baseline;
@@ -1163,7 +1167,7 @@ function caminos(){
 
   var filas=[], pesoAct=w[w.length-1].kg;
 
-  function fila(k, act, obj, ini, dec, unidad, sube){
+  function fila(k, act, obj, ini, dec, unidad, sube, como, extra){
     if(act==null||obj==null||ini==null) return;
     var span=Math.abs(obj-ini);
     var avance=span>0.0001?(Math.abs(act-ini)/span)*100:100;
@@ -1174,25 +1178,46 @@ function caminos(){
     filas.push('<div class="cm-fila">'+
       '<div class="cm-top"><span class="cm-k">'+k+'</span>'+
       '<span class="cm-v num"><s>'+ini.toFixed(dec)+'</s> → <b>'+act.toFixed(dec)+'</b> → '+obj.toFixed(dec)+unidad+'</span></div>'+
+      (extra?'<div class="cm-extra num">'+extra+'</div>':'')+
       '<div class="cm-bar"><div class="f'+(pct>=100?' oro':'')+'" style="width:'+pct.toFixed(0)+'%"></div></div>'+
       '<div class="cm-pct"><span><b>'+pct.toFixed(0)+'%</b> del camino</span>'+
       '<span>'+(pct>=100?'<span class="cm-ok">LOGRADO ⚑</span>':'faltan '+falta.toFixed(dec)+unidad)+'</span></div>'+
+      (como?'<div class="cm-como">'+como+'</div>':'')+
       '</div>');
   }
 
+  var CM_COMIDA='🍽 <b>Déficit:</b> 1900 kcal · 130 g de proteína · sin bolsa · solo zero';
+  var CM_MAGRA='⚒ <b>Proteína 130 g</b> + entrenar cerca del fallo + no acelerar el déficit';
+
   /* 1. PESO — de dónde saliste hasta el destino calculado */
-  fila('PESO', pesoAct, destinoPeso(), st.perfil.ini, 1, ' kg', false);
+  fila('PESO', pesoAct, destinoPeso(), st.perfil.ini, 1, ' kg', false, CM_COMIDA);
 
   if(ms.length){
     var pri=ms[0], ult=ms[ms.length-1];
     var gIni=navyPct(pri.cin,pri.cue,pri.cad), gAct=navyPct(ult.cin,ult.cue,ult.cad);
+    var co=cinturaObjetivo();
     /* 2. GRASA */
-    fila('GRASA', gAct, st.plan.grasaObj, gIni, 1, '%', false);
-    /* 3. CINTURA */
-    fila('CINTURA', ult.cin, cinturaObjetivo(), pri.cin, 1, ' cm', false);
-    /* 4. RATIO V — el único que SUBE */
-    fila('RATIO V', ratioV(ult), ratioObjetivo(), ratioV(pri), 2, '', true);
-    /* 5. MASA MAGRA — objetivo PLANO: aquí "cumplir" es NO BAJAR */
+    fila('GRASA', gAct, st.plan.grasaObj, gIni, 1, '%', false, CM_COMIDA);
+    /* 3. CINTURA — el marcador de grasa: baja con la comida */
+    fila('CINTURA', ult.cin, co, pri.cin, 1, ' cm', false, CM_COMIDA);
+
+    /* 4-6. LOS MÚSCULOS SE MIDEN EN RATIO, NO EN CENTÍMETROS.
+       Al perder 19 kg, hombros/brazo/muslo BAJAN en cm aunque el músculo
+       se conserve — la grasa que los cubre se va. Lo que sube es la
+       proporción contra la cintura, y eso es exactamente la V. */
+    function filaRatio(k, campo, dec, como){
+      if(!pri[campo]||!ult[campo]||!co) return;
+      var rIni=pri[campo]/pri.cin, rAct=ult[campo]/ult.cin, rObj=ult[campo]/co;
+      var ex=campo+': '+pri[campo].toFixed(1)+' → <b style="color:var(--brasa)">'+ult[campo].toFixed(1)+'</b> cm '+
+             '<span style="color:var(--ceniza)">(el cm baja con la grasa; el ratio es lo que manda)</span>';
+      fila(k, rAct, rObj, rIni, dec, '', true, como,
+        ex.replace(campo+':', k.toLowerCase()+':'));
+    }
+    filaRatio('HOMBROS','hom',2,'⚒ <b>Elevaciones laterales · face pull · jalón al pecho</b> + proteína');
+    filaRatio('BRAZO','bra',3,'⚒ <b>Jalón y remo</b> (el bíceps trabaja en los dos) + proteína');
+    filaRatio('MUSLO','mus',3,'⚒ <b>Prensa de piernas · peso muerto rumano · puente de glúteos</b>');
+
+    /* 7. MASA MAGRA — objetivo PLANO: aquí "cumplir" es NO BAJAR */
     var mIni=magraDe(pri), mAct=magraDe(ult);
     if(mIni!=null&&mAct!=null){
       var d=mAct-mIni, bien=d>=-1;
@@ -1201,7 +1226,7 @@ function caminos(){
         '<span class="cm-v num"><s>'+mIni.toFixed(1)+'</s> → <b>'+mAct.toFixed(1)+'</b> kg</span></div>'+
         '<div class="cm-pct"><span>objetivo: <b>no bajar</b></span><span>'+
         (bien?'<span class="cm-ok">INTACTA ✓</span>':'<span class="cm-mal">BAJÓ '+Math.abs(d).toFixed(1)+' kg</span>')+
-        '</span></div></div>');
+        '</span></div><div class="cm-como">'+CM_MAGRA+'</div></div>');
     }
   } else {
     filas.push('<div class="cm-vacio" style="padding-top:9px">Mídete cintura, cuello y hombros y '+
