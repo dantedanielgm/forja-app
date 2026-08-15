@@ -20,6 +20,36 @@
   }
   .num{font-family:Consolas,ui-monospace,monospace; font-variant-numeric:tabular-nums}
   .wrap{max-width:430px; margin:0 auto; padding:20px 16px 40px; display:flex; flex-direction:column; gap:14px}
+  /* ORDEN DE LECTURA (pedido de DD): estado → mes+destino → caminos →
+     entreno → carga → fase → todo lo demás en su orden natural.
+     Se hace con `order` de flexbox para no mover bloques de HTML. */
+  .wrap > *{order:50}
+  #alarmaStorage,#bienvenida,#avisoRecuperado,#hito{order:1}
+  #estadoCard{order:10}
+  #mesHero{order:20}
+  #cierreMes{order:25}
+  #caminosCard{order:30}
+  #entrenoCard{order:35}
+  #cargaCard{order:40}
+  #faseCard{order:45}
+
+  /* CAMINOS */
+  .cm-fila{padding:9px 0; border-bottom:1px solid var(--hierro)}
+  .cm-fila:last-child{border-bottom:none}
+  .cm-top{display:flex; justify-content:space-between; align-items:baseline; gap:8px}
+  .cm-k{font-size:11px; font-weight:900; letter-spacing:1.5px; color:var(--ceniza)}
+  .cm-v{font-size:14px; font-weight:700}
+  .cm-v b{color:var(--brasa)}
+  .cm-v s{text-decoration:none; color:var(--ceniza)}
+  .cm-bar{height:8px; background:var(--hierro); margin-top:6px; overflow:hidden}
+  .cm-bar .f{height:100%; background:linear-gradient(90deg,#6E3A1A,var(--brasa))}
+  .cm-bar .f.oro{background:linear-gradient(90deg,#8A6A1B,var(--chispa))}
+  .cm-pct{font-size:10.5px; color:var(--ceniza); letter-spacing:1px; margin-top:3px;
+    display:flex; justify-content:space-between}
+  .cm-pct b{color:var(--hueso)}
+  .cm-ok{color:var(--chispa); font-weight:900}
+  .cm-mal{color:#FF9A6B; font-weight:900}
+  .cm-vacio{color:var(--ceniza); font-size:13px; line-height:1.55}
 
   header{display:flex; justify-content:space-between; align-items:baseline;
     border-bottom:3px solid var(--brasa); padding-bottom:10px}
@@ -312,7 +342,7 @@
   </section>
 
   <!-- HERO + METAS -->
-  <section class="card">
+  <section class="card" id="estadoCard">
     <p class="tit">Estado <small id="norteTag">NORTE</small></p>
     <div class="hero">
       <div class="kg num" id="kgActual">—<u>kg</u></div>
@@ -358,8 +388,14 @@
     <div class="editor" id="editor"></div>
   </section>
 
+  <!-- CAMINOS — dónde estoy respecto de CADA objetivo, no solo del peso -->
+  <section class="card" id="caminosCard">
+    <p class="tit">Caminos <small id="caminosTag">HACIA EL DESTINO</small></p>
+    <div id="caminosBody"></div>
+  </section>
+
   <!-- ENTRENO DE HOY -->
-  <section class="card">
+  <section class="card" id="entrenoCard">
     <p class="tit">Entreno de hoy <small id="rutTag"></small></p>
     <div id="rutBody"></div>
   </section>
@@ -377,7 +413,7 @@
   </section>
 
   <!-- FASE DE RUTINA — el volumen crece con el hábito, no al revés -->
-  <section class="card">
+  <section class="card" id="faseCard">
     <p class="tit">Fase de rutina <small id="faseTag"></small></p>
     <div class="fase-row">
       <div class="fase-num num" id="faseNum">0</div>
@@ -942,7 +978,7 @@ function render(){
     }
   }
 
-  fotoRender(); chipsRender(reg); rutina(); carga(); faseRender(); medidas(); grafica(); mosaico(); semana(); cierreMes(); rutaRender(); renderMes(); perfilRender(); avisoBackup();
+  fotoRender(); chipsRender(reg); rutina(); carga(); faseRender(); caminos(); medidas(); grafica(); mosaico(); semana(); cierreMes(); rutaRender(); renderMes(); perfilRender(); avisoBackup();
 }
 
 /* ---- CARGA SEMANAL ----
@@ -1080,6 +1116,32 @@ function navyPct(cin,cue,cad){
 /* RATIO V = hombros ÷ cintura. El marcador estético puro: no cambia si solo
    pierdes agua, y sube tanto si la cintura baja como si los hombros crecen. */
 function ratioV(m){ return (m&&m.hom&&m.cin)?m.hom/m.cin:null; }
+
+/* CINTURA OBJETIVO — Navy invertida: qué cintura da el % de grasa objetivo,
+   manteniendo el cuello (y la cadera) de la última medición.
+   Igual que el destino de peso: se CALCULA, no se escribe. Cuando el cuello
+   baje con la grasa, el objetivo se afina solo en la siguiente medición. */
+function cinturaObjetivo(){
+  var ms=medsOrd(); if(!ms.length) return null;
+  var u=ms[ms.length-1], h=st.perfil.h, bf=st.plan.grasaObj;
+  var t=495/(bf+450);
+  if(st.perfil.sexo==='M'){
+    if(!u.cad) return null;
+    var xm=(1.29579+0.22100*log10(h)-t)/0.35004;
+    var vm=Math.pow(10,xm);
+    return (vm>0)?(u.cue-u.cad+vm):null;
+  }
+  var x=(1.0324+0.15456*log10(h)-t)/0.19077;
+  var v=Math.pow(10,x);
+  return (v>0)?(u.cue+v):null;
+}
+/* RATIO V OBJETIVO — con los hombros de hoy sobre la cintura objetivo.
+   Si los hombros crecen, el objetivo sube con ellos. */
+function ratioObjetivo(){
+  var ms=medsOrd(); if(!ms.length) return null;
+  var u=ms[ms.length-1], co=cinturaObjetivo();
+  return (u.hom&&co)?u.hom/co:null;
+}
 /* peso vigente en una fecha (el último registrado hasta ese día) */
 function pesoEn(fecha){
   var w=pesos().filter(function(p){return p.d<=fecha});
@@ -1090,6 +1152,64 @@ function magraDe(m){
   return (g!=null&&p!=null)?p*(1-g/100):null;
 }
 function medsOrd(){ return st.medidas.slice().sort(function(x,y){return x.d<y.d?-1:1}); }
+
+/* ---- CAMINOS: dónde estoy respecto de CADA objetivo ----
+   El peso ya tenía su barra; los demás marcadores no tenían ninguna.
+   Todos los objetivos se calculan de la composición real. */
+function caminos(){
+  var el=document.getElementById('caminosBody');
+  var ms=medsOrd(), w=pesos();
+  if(!w.length){ el.innerHTML='<div class="cm-vacio">Registra tu peso y verás el primer camino.</div>'; return; }
+
+  var filas=[], pesoAct=w[w.length-1].kg;
+
+  function fila(k, act, obj, ini, dec, unidad, sube){
+    if(act==null||obj==null||ini==null) return;
+    var span=Math.abs(obj-ini);
+    var avance=span>0.0001?(Math.abs(act-ini)/span)*100:100;
+    /* si se movió en la dirección contraria, el avance es 0, no negativo */
+    var haciaAlla=sube?(act>=ini):(act<=ini);
+    var pct=Math.max(0,Math.min(100, haciaAlla?avance:0));
+    var falta=Math.abs(act-obj);
+    filas.push('<div class="cm-fila">'+
+      '<div class="cm-top"><span class="cm-k">'+k+'</span>'+
+      '<span class="cm-v num"><s>'+ini.toFixed(dec)+'</s> → <b>'+act.toFixed(dec)+'</b> → '+obj.toFixed(dec)+unidad+'</span></div>'+
+      '<div class="cm-bar"><div class="f'+(pct>=100?' oro':'')+'" style="width:'+pct.toFixed(0)+'%"></div></div>'+
+      '<div class="cm-pct"><span><b>'+pct.toFixed(0)+'%</b> del camino</span>'+
+      '<span>'+(pct>=100?'<span class="cm-ok">LOGRADO ⚑</span>':'faltan '+falta.toFixed(dec)+unidad)+'</span></div>'+
+      '</div>');
+  }
+
+  /* 1. PESO — de dónde saliste hasta el destino calculado */
+  fila('PESO', pesoAct, destinoPeso(), st.perfil.ini, 1, ' kg', false);
+
+  if(ms.length){
+    var pri=ms[0], ult=ms[ms.length-1];
+    var gIni=navyPct(pri.cin,pri.cue,pri.cad), gAct=navyPct(ult.cin,ult.cue,ult.cad);
+    /* 2. GRASA */
+    fila('GRASA', gAct, st.plan.grasaObj, gIni, 1, '%', false);
+    /* 3. CINTURA */
+    fila('CINTURA', ult.cin, cinturaObjetivo(), pri.cin, 1, ' cm', false);
+    /* 4. RATIO V — el único que SUBE */
+    fila('RATIO V', ratioV(ult), ratioObjetivo(), ratioV(pri), 2, '', true);
+    /* 5. MASA MAGRA — objetivo PLANO: aquí "cumplir" es NO BAJAR */
+    var mIni=magraDe(pri), mAct=magraDe(ult);
+    if(mIni!=null&&mAct!=null){
+      var d=mAct-mIni, bien=d>=-1;
+      filas.push('<div class="cm-fila">'+
+        '<div class="cm-top"><span class="cm-k">MASA MAGRA</span>'+
+        '<span class="cm-v num"><s>'+mIni.toFixed(1)+'</s> → <b>'+mAct.toFixed(1)+'</b> kg</span></div>'+
+        '<div class="cm-pct"><span>objetivo: <b>no bajar</b></span><span>'+
+        (bien?'<span class="cm-ok">INTACTA ✓</span>':'<span class="cm-mal">BAJÓ '+Math.abs(d).toFixed(1)+' kg</span>')+
+        '</span></div></div>');
+    }
+  } else {
+    filas.push('<div class="cm-vacio" style="padding-top:9px">Mídete cintura, cuello y hombros y '+
+      'aparecen los otros cuatro caminos: <b style="color:var(--chispa)">grasa, cintura, ratio V y masa magra</b>.</div>');
+  }
+  el.innerHTML=filas.join('');
+  document.getElementById('caminosTag').textContent=ms.length?('AL '+st.plan.grasaObj+'% DE GRASA'):'HACIA EL DESTINO';
+}
 /* ¿ya hay medición completa (con hombros) este mes? */
 function faltaCompleta(){
   var ym=ymStr();
