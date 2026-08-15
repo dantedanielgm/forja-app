@@ -50,6 +50,17 @@
   .cm-ok{color:var(--chispa); font-weight:900}
   .cm-mal{color:#FF9A6B; font-weight:900}
   .cm-extra{font-size:11px; color:var(--ceniza); margin-top:3px}
+  /* VOLUMEN POR ZONA */
+  .zn-tit{font-size:10px; font-weight:900; letter-spacing:2px; color:var(--ceniza);
+    border-top:1px solid var(--hierro); padding-top:10px; margin-bottom:7px}
+  .zn-fila{display:flex; align-items:center; gap:9px; padding:4px 0; font-size:12.5px}
+  .zn-n{width:66px; flex:none; font-weight:700; color:var(--ceniza); font-size:11px; letter-spacing:1px}
+  .zn-bar{flex:1; height:7px; background:var(--hierro); overflow:hidden}
+  .zn-bar .f{height:100%; background:var(--brasa)}
+  .zn-bar .f.ok{background:var(--chispa)}
+  .zn-v{flex:none; width:74px; text-align:right; font-size:11.5px; color:var(--ceniza)}
+  .zn-v b{color:var(--hueso)}
+  .zn-v .ok{color:var(--chispa); font-weight:900}
   .cm-como{font-size:11.5px; line-height:1.4; color:var(--ceniza); margin-top:6px;
     padding:6px 9px; background:var(--carbon); border-left:2px solid var(--brasa)}
   .cm-como b{color:var(--hueso)}
@@ -414,6 +425,9 @@
     <div class="mh-bar"><div class="fill" id="cargaFill" style="width:0%"></div></div>
     <div class="barra-l num"><span>meta <b id="cargaM">1</b></span><span id="cargaPct"></span><span>objetivo <b id="cargaObj">20</b></span></div>
     <div id="cargaLista" class="rut-desc" style="margin-top:9px"></div>
+    <!-- VOLUMEN POR ZONA: el mínimo que PROTEGE el músculo, para no tener
+         que reaccionar cuando una medida baje. Prevención, no reacción. -->
+    <div id="zonasBody" style="margin-top:12px"></div>
   </section>
 
   <!-- FASE DE RUTINA — el volumen crece con el hábito, no al revés -->
@@ -1040,9 +1054,39 @@ function carga(){
     var a=st.ejerc[hoyStr(new Date(lun.getTime()+i*864e5))];
     if(a) a.forEach(function(n){ if(lista.indexOf(n)<0) lista.push(n); });
   }
+  zonas(lun);
   document.getElementById('cargaLista').innerHTML=lista.length
     ? 'Esta semana: <b style="color:var(--hueso)">'+lista.join(' · ')+'</b>'
     : 'Marca el círculo de cualquier ejercicio de abajo. <b style="color:var(--chispa)">Uno basta para arrancar.</b>';
+}
+/* ---- VOLUMEN POR ZONA ----
+   6 series/semana por zona es el mínimo que CONSERVA músculo en déficit
+   (3 para core). Cada ejercicio de la rutina son 3 series → 2 ejercicios
+   por zona. Esto es prevención: cumplirlo evita tener que reaccionar
+   cuando una medida baje. Y una medida que baja en UNA semana es ruido,
+   no pérdida — el músculo no cambia de forma medible en 7 días. */
+var ZONAS=[
+  {n:'ESPALDA', min:6, re:/jal[óo]n|remo/i},
+  {n:'HOMBROS', min:6, re:/lateral|face pull/i},
+  {n:'PIERNAS', min:6, re:/prensa|gl[úu]teo|rumano|sentadilla/i},
+  {n:'CORE',    min:3, re:/plancha/i}
+];
+function zonas(lun){
+  var hechos=[];
+  for(var i=0;i<7;i++){
+    var a=st.ejerc[hoyStr(new Date(lun.getTime()+i*864e5))];
+    if(a) hechos=hechos.concat(a);
+  }
+  var html='<div class="zn-tit">SERIES POR ZONA · MÍNIMO PARA NO PERDER MÚSCULO</div>';
+  ZONAS.forEach(function(z){
+    var series=hechos.filter(function(n){return z.re.test(n)}).length*3;   /* 3 series por ejercicio */
+    var pct=Math.min(100, series/z.min*100), ok=series>=z.min;
+    html+='<div class="zn-fila">'+
+      '<span class="zn-n">'+z.n+'</span>'+
+      '<span class="zn-bar"><span class="f'+(ok?' ok':'')+'" style="width:'+pct.toFixed(0)+'%;display:block"></span></span>'+
+      '<span class="zn-v num"><b>'+series+'</b>/'+z.min+(ok?' <span class="ok">✓</span>':'')+'</span></div>';
+  });
+  document.getElementById('zonasBody').innerHTML=html;
 }
 function tocaEjerc(nom){
   var hoy=hoyStr();
@@ -1216,6 +1260,20 @@ function caminos(){
     filaRatio('HOMBROS','hom',2,'⚒ <b>Elevaciones laterales · face pull · jalón al pecho</b> + proteína');
     filaRatio('BRAZO','bra',3,'⚒ <b>Jalón y remo</b> (el bíceps trabaja en los dos) + proteína');
     filaRatio('MUSLO','mus',3,'⚒ <b>Prensa de piernas · peso muerto rumano · puente de glúteos</b>');
+
+    /* CUELLO — informativo, sin barra: es INSUMO de la fórmula, no una meta.
+       Baja con la grasa y eso está bien. "Tener cuello" se gana con menos
+       grasa bajo el mentón y con la cabeza atrás, no con más circunferencia. */
+    if(pri.cue&&ult.cue){
+      var dc=ult.cue-pri.cue;
+      filas.push('<div class="cm-fila">'+
+        '<div class="cm-top"><span class="cm-k">CUELLO</span>'+
+        '<span class="cm-v num"><s>'+pri.cue.toFixed(1)+'</s> → <b>'+ult.cue.toFixed(1)+'</b> cm'+
+        (Math.abs(dc)>0.05?' <span style="color:var(--ceniza)">('+(dc>0?'+':'')+dc.toFixed(1)+')</span>':'')+'</span></div>'+
+        '<div class="cm-pct"><span>sin meta: es <b>insumo</b> del cálculo de grasa</span></div>'+
+        '<div class="cm-como">📏 Baja con la grasa y está bien. <b>El cuello se ve</b> por menos '+
+        'grasa bajo el mentón y por la cabeza atrás — no por más circunferencia.</div></div>');
+    }
 
     /* 7. MASA MAGRA — objetivo PLANO: aquí "cumplir" es NO BAJAR */
     var mIni=magraDe(pri), mAct=magraDe(ult);
