@@ -1386,6 +1386,11 @@ function hoyRender(){
   defsDia(ahora).forEach(function(h){
     var on=!!reg[h.k];
     var label=/prote/i.test(h.label)?('Proteína <b>'+prot+' g</b>'+(prot>140-1&&prot!==130?' <span style="color:var(--ceniza)">(ritmo al borde)</span>':'')):h.label;
+    /* la lengua se olvida: instrucciones siempre a la vista */
+    if(/lengua/i.test(h.label))
+      label+='<br><span style="font-size:11px;color:var(--ceniza)">En cada comida: '+
+        '<b style="color:var(--ceniza)">Punto → Saliva → Aprieta → Traga</b> (lengua arriba, '+
+        'dientes juntos, sin que toque los dientes de adelante) · y lengua al paladar 10 s en las pausas</span>';
     html+='<div class="hy-it'+(on?' hecho':'')+'"><button class="rut-chk'+(on?' on':'')+'" data-h="'+h.k+'">✓</button>'+
       '<span class="txt">'+label+'</span></div>';
   });
