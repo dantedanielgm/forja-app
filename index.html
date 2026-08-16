@@ -1401,6 +1401,16 @@ function hoyRender(){
        '<span style="color:var(--ceniza)">en cualquier momento — 2 min</span>')+'</span></div>';
   var fase=faseDe(st.carga.meta), F=FASES[fase];
   var lun=lunesDe(ahora), hechosSem=cuentaSemana(lun);
+
+  /* LO IDEAL: qué tocaría HOY en la rutina perfecta (fase 3).
+     No es exigencia — es el norte del hábito, visible a diario. */
+  var IDEAL={1:'A',2:'B',4:'A',6:'B'};
+  var sesIdeal=IDEAL[ahora.getDay()];
+  var idealTxt=sesIdeal
+    ?(sesIdeal==='A'
+      ?'Sesión <b>A</b> — jalón · remo · face pull · chin tucks · plancha'
+      :'Sesión <b>B</b> — prensa · puente de glúteos · rumano · laterales · remo')
+    :'descanso — '+(ahora.getDay()===0?'el domingo es 100% familia':'el músculo se construye descansando');
   if(fase>0&&F.dias.indexOf(ahora.getDay())>=0){
     html+='<div class="hy-it"><span style="width:26px;flex:none"></span><span class="txt">'+
       '<b>HOY TOCA SESIÓN</b> — abajo está la lista</span>'+
@@ -1410,6 +1420,11 @@ function hoyRender(){
       'Semana: <b>'+hechosSem+'/'+st.carga.meta+'</b> ejercicio'+(st.carga.meta>1?'s':'')+
       (hechosSem>=st.carga.meta?' <span style="color:var(--chispa);font-weight:900">✓</span>':' — cualquiera suma')+
       '</span><button class="hy-go" data-go="cargaCard">MARCAR ▾</button></div>';
+  }
+  if(fase<3){
+    html+='<div class="hy-it" style="opacity:.65"><span style="width:26px;flex:none;text-align:center">👻</span>'+
+      '<span class="txt"><span style="color:var(--ceniza);font-size:10px;font-weight:900;letter-spacing:1.5px">EN LA RUTINA PERFECTA HOY</span><br>'+
+      idealTxt+'</span></div>';
   }
 
   document.getElementById('hoyLista').innerHTML=html;
