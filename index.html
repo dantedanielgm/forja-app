@@ -56,6 +56,17 @@
   /* CALENDARIO DEL MES
      Lenguaje visual: el PLAN es contorno, lo HECHO es relleno.
      Un mes bien trabajado se ve sólido de un vistazo. */
+  .cal-tit{display:flex; align-items:center; gap:8px; flex:none}
+  .cal-tit button{cursor:pointer; font-family:inherit; white-space:nowrap}
+  /* el rótulo de la derecha cede espacio antes que montarse sobre el botón */
+  #calCard .tit{gap:10px}
+  #calCard .tit small{text-align:right; line-height:1.35; min-width:0}
+  .cal-tit button.perf{border-color:var(--chispa); color:var(--chispa)}
+  /* En modo PERFECTO nada se rellena: es una proyección, no un registro.
+     "Relleno = lo hiciste" no se rompe nunca. */
+  .cal-aviso{background:rgba(232,184,75,.09); border-left:3px solid var(--chispa);
+    padding:7px 9px; font-size:11.5px; line-height:1.5; margin-bottom:9px}
+  .cal-aviso b{color:var(--chispa)}
   .cal-nav{display:flex; align-items:center; justify-content:center; gap:14px; margin:2px 0 9px}
   .cal-fl{background:var(--hierro); color:var(--hueso); border:none; font-size:17px;
     line-height:1; padding:5px 13px; cursor:pointer; font-family:inherit}
@@ -600,12 +611,13 @@
   <!-- CALENDARIO DEL MES — el plan y lo hecho en un solo cuadro.
        Todo sale de la fase vigente y de tus registros; nada está tecleado. -->
   <section class="card" id="calCard">
-    <p class="tit">Calendario <small id="calTag"></small></p>
+    <p class="tit"><span class="cal-tit">Calendario<button id="calModo" type="button">REAL</button></span><small id="calTag"></small></p>
     <div class="cal-nav">
       <button class="cal-fl" id="calPrev" aria-label="Mes anterior">‹</button>
       <span class="cal-mes num" id="calMes">—</span>
       <button class="cal-fl" id="calNext" aria-label="Mes siguiente">›</button>
     </div>
+    <div class="cal-aviso" id="calAviso" style="display:none"></div>
     <div class="cal-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
     <div class="cal-grid" id="calGrid"></div>
     <div class="cal-ley" id="calLey"></div>
@@ -2405,7 +2417,15 @@ function rutina(){
    Los días de sesión NO están tecleados: salen de FASES[fase].dias, así que
    el calendario se reacomoda solo cuando sube de fase. */
 var calYM=null;                       /* null = mes actual; se fija al navegar */
+var calPerf=false;                    /* false = REAL (tu fase) · true = PERFECTO (fase 3) */
 var RE_POST=/chin tuck|tor[áa]cica|marco de puerta/i;   /* lo diario, no hipertrofia */
+
+/* cuántos días de sesión tiene el mes con un juego de días dado */
+function sesionesEnMes(diasSem,Y,M){
+  var n=0, ult=new Date(Y,M+1,0).getDate();
+  for(var d=1;d<=ult;d++) if(diasSem.indexOf(new Date(Y,M,d).getDay())>=0) n++;
+  return n;
+}
 
 function calLim(){                    /* hasta dónde deja navegar */
   var min=ymStr(), max=ymMax();
@@ -2416,12 +2436,27 @@ function calLim(){                    /* hasta dónde deja navegar */
 }
 function calendario(){
   var ym=calYM||ymStr(), p=ym.split('-'), Y=+p[0], M=+p[1]-1;
-  var fase=faseDe(st.carga.meta), F=FASES[fase], Fsig=(fase<3?FASES[fase+1]:null);
+  /* real = tu fase y tus registros · perfecto = fase 3, solo el plan */
+  var real=!calPerf, faseReal=faseDe(st.carga.meta);
+  var fase=real?faseReal:3, F=FASES[fase];
+  var Fsig=(real&&fase<3)?FASES[fase+1]:null;
   var hoy=new Date(); hoy.setHours(0,0,0,0);
   var hoyS=hoyStr(hoy), lim=calLim();
 
+  var btn=document.getElementById('calModo');
+  btn.textContent=real?'REAL':'PERFECTO';
+  btn.classList.toggle('perf',!real);
   document.getElementById('calMes').textContent=MESES[M]+' '+Y;
   document.getElementById('calTag').textContent='fase '+fase+' · '+F.nom.toLowerCase();
+
+  var av=document.getElementById('calAviso');
+  if(real) av.style.display='none';
+  else {
+    av.style.display='block';
+    av.innerHTML='👻 <b>MES PERFECTO</b> — así se ve el mes en <b>fase 3</b>, con la rutina '+
+      'completa. Es a dónde vas, no lo que se te pide hoy. Aquí <b>nada se rellena</b>: '+
+      'es el plan, no tu registro.';
+  }
   document.getElementById('calPrev').disabled = ymSuma(ym,-1)<lim.min;
   document.getElementById('calNext').disabled = ymSuma(ym, 1)>lim.max;
 
@@ -2439,20 +2474,21 @@ function calendario(){
   for(var dia=1;dia<=ultDia;dia++){
     var fe=new Date(Y,M,dia), fs=hoyStr(fe), dow=fe.getDay();
     var futuro=fe>hoy, esHoy=(fs===hoyS);
+    /* en PERFECTO no hay pasado ni futuro: el mes entero es proyección */
     var cel=document.createElement('div');
-    cel.className='cal-d'+(esHoy?' hoy':'')+(futuro?' futuro':'');
+    cel.className='cal-d'+(esHoy?' hoy':'')+((real&&futuro)?' futuro':'');
 
-    var hechos=st.ejerc[fs]||[];
+    var hechos=real?(st.ejerc[fs]||[]):[];
     var hizoHip =hechos.some(function(n){ return !RE_POST.test(n); });
     var hizoPost=hechos.some(function(n){ return  RE_POST.test(n); })
-                 || !!(st.habits[fs]&&st.habits[fs].l);
+                 || !!(real&&st.habits[fs]&&st.habits[fs].l);
 
     /* el número brilla si ese día se pesó */
     var num=document.createElement('div');
-    num.className='cal-n num'+(pesoDe[fs]?' ok':'');
+    num.className='cal-n num'+((real&&pesoDe[fs])?' ok':'');
     num.textContent=dia;
     cel.appendChild(num);
-    if(pesoDe[fs]) nPeso++;
+    if(real&&pesoDe[fs]) nPeso++;
 
     /* SESIÓN DE HIPERTROFIA */
     var idx=F.dias.indexOf(dow), gIdx=Fsig?Fsig.dias.indexOf(dow):-1, tag=null;
@@ -2472,10 +2508,10 @@ function calendario(){
     if(tag) cel.appendChild(tag);
 
     /* MEDICIÓN: día 1 completa (★ = + foto de perfil) · lunes cintura y cuello */
-    var esUno=(dia===1), esLun=(dow===1);
-    if(esUno||esLun||medDe[fs]){
+    var esUno=(dia===1), esLun=(dow===1), medHecha=real&&medDe[fs];
+    if(esUno||esLun||medHecha){
       var md=document.createElement('div');
-      md.className='cal-tag med'+(medDe[fs]?' on':'');
+      md.className='cal-tag med'+(medHecha?' on':'');
       md.textContent=esUno?'MEDIR★':'MEDIR';
       cel.appendChild(md);
     }
@@ -2501,15 +2537,29 @@ function calendario(){
   if(Fsig) l+='<br><span class="cal-sw" style="border:1px dashed var(--brasa)"></span>'+
     'Los <b>punteados</b> son los días que se te abren en <b>fase '+(fase+1)+'</b> '+
     '(te faltan '+(F.sig-st.carga.meta)+' de meta semanal).';
-  if(fase===0) l+='<br style="line-height:2.2"><b style="color:var(--chispa)">Fase 0: no hay día obligado.</b> '+
+  if(real&&fase===0) l+='<br style="line-height:2.2"><b style="color:var(--chispa)">Fase 0: no hay día obligado.</b> '+
     'Entrenes el día que entrenes, se pinta aquí y suma.';
-  if(esteMes) l+='<div style="margin-top:7px; padding-top:6px; border-top:1px solid var(--hierro)">'+
+  if(real&&esteMes) l+='<div style="margin-top:7px; padding-top:6px; border-top:1px solid var(--hierro)">'+
     'Este mes hasta hoy: <b>'+nPeso+'</b> pesajes · <b>'+nPost+'</b> días de postura'+
     (nSes?' · sesiones <b>'+nSesOk+'/'+nSes+'</b>':'')+'.</div>';
+
+  /* PERFECTO: el contraste en números, que es lo que engancha */
+  if(!real){
+    var perfSes=sesionesEnMes(FASES[3].dias,Y,M);
+    var tuSes  =sesionesEnMes(FASES[faseReal].dias,Y,M);
+    l+='<div style="margin-top:7px; padding-top:6px; border-top:1px solid var(--hierro)">'+
+       'Este mes el perfecto pide <b>'+perfSes+' sesiones</b> y postura los <b>'+ultDia+' días</b>.'+
+       (faseReal===3
+         ? ' <b style="color:var(--chispa)">Ya estás en fase 3: este ES tu mes.</b>'
+         : ' Tu fase '+faseReal+' pide <b>'+(tuSes||'0 fijas')+'</b>'+(tuSes?' sesiones':'')+
+           '. Se sube con la meta semanal, no de golpe.')+
+       '</div>';
+  }
   document.getElementById('calLey').innerHTML=l;
 }
 document.getElementById('calPrev').onclick=function(){ calYM=ymSuma(calYM||ymStr(),-1); calendario(); };
 document.getElementById('calNext').onclick=function(){ calYM=ymSuma(calYM||ymStr(), 1); calendario(); };
+document.getElementById('calModo').onclick=function(){ calPerf=!calPerf; calendario(); };
 
 /* ---- FASE: dónde estás y qué falta para la siguiente ---- */
 function faseRender(){
