@@ -52,6 +52,14 @@
   .cm-ok{color:var(--chispa); font-weight:900}
   .cm-mal{color:#FF9A6B; font-weight:900}
   .cm-extra{font-size:11px; color:var(--ceniza); margin-top:3px}
+  /* PULL TO REFRESH */
+  body{overscroll-behavior-y:contain}   /* que no dispare el gesto nativo del navegador */
+  .pull-ind{position:fixed; top:0; left:0; right:0; z-index:98;
+    background:var(--brasa); color:var(--carbon); text-align:center;
+    font-size:11px; font-weight:900; letter-spacing:2px; padding:9px 0;
+    transform:translateY(-100%); pointer-events:none}
+  .pull-ind.listo{background:var(--chispa)}
+
   /* MODAL DEL DICCIONARIO DE EJERCICIOS */
   .modal{display:none; position:fixed; inset:0; background:rgba(10,8,5,.88); z-index:99;
     align-items:center; justify-content:center; padding:18px}
@@ -409,6 +417,9 @@
     <h1>FORJA<i>.</i></h1>
     <div class="fecha" id="fecha"></div>
   </header>
+
+  <!-- ARRASTRA HACIA ABAJO PARA ACTUALIZAR -->
+  <div class="pull-ind" id="pullInd">↓ ARRASTRA PARA ACTUALIZAR</div>
 
   <!-- DICCIONARIO DE EJERCICIOS: cualquier nombre de la app abre esto -->
   <div class="modal" id="modalEj">
@@ -3026,5 +3037,76 @@ render();
 /* ---- PWA: instalable y con arranque offline cuando se sirve por http(s) ---- */
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol))
   navigator.serviceWorker.register('sw.js').catch(function(){});
+
+/* ---- ARRASTRA HACIA ABAJO PARA ACTUALIZAR ----
+   Una PWA abierta desde el ícono NO se recarga al volver a ella: sigue viva en
+   memoria, por eso los cambios solo aparecían cerrándola del todo. Este gesto
+   es la manera de pedirle la última versión sin salir. */
+(function(){
+  var ind=document.getElementById('pullInd');
+  var y0=null, dist=0, UMBRAL=70, TOPE=120, recargando=false;
+
+  function alto(){ return ind.offsetHeight||34; }
+  function mueve(px){
+    var h=alto(), vis=Math.min(px*0.55, h);
+    ind.style.transform='translateY('+(vis-h)+'px)';
+  }
+  function guarda(){                       /* la vuelta a su sitio, animada */
+    ind.style.transition='transform .22s ease';
+    ind.style.transform='';
+    ind.classList.remove('listo');
+    setTimeout(function(){ ind.style.transition=''; }, 240);
+  }
+  function modalAbierto(){
+    var m=document.getElementById('modalEj');
+    return !!(m && m.classList.contains('abierto'));
+  }
+
+  document.addEventListener('touchstart', function(ev){
+    if(recargando || modalAbierto() || ev.touches.length!==1 || window.scrollY>0){ y0=null; return; }
+    ind.style.transition='';
+    y0=ev.touches[0].clientY; dist=0;
+  }, {passive:true});
+
+  document.addEventListener('touchmove', function(ev){
+    if(y0==null) return;
+    dist=ev.touches[0].clientY-y0;
+    /* si se fue hacia arriba o la página ya scrolleó, esto era un scroll normal */
+    if(dist<=0 || window.scrollY>0){ y0=null; dist=0; ind.style.transform=''; ind.classList.remove('listo'); return; }
+    if(dist>TOPE) dist=TOPE;
+    mueve(dist);
+    var listo=dist>=UMBRAL;
+    ind.classList.toggle('listo', listo);
+    ind.textContent = listo ? '↑ SUELTA PARA ACTUALIZAR' : '↓ ARRASTRA PARA ACTUALIZAR';
+  }, {passive:true});
+
+  document.addEventListener('touchend', function(){
+    if(y0==null) return;
+    var pasó = dist>=UMBRAL;
+    y0=null; dist=0;
+    if(!pasó){ guarda(); return; }
+
+    /* Se pidió actualizar: dejamos la barra a la vista y recargamos.
+       reg.update() primero para que el service worker busque una versión nueva
+       antes de que el navegador vuelva a pedir el HTML. */
+    recargando=true;
+    ind.classList.add('listo');
+    ind.textContent='ACTUALIZANDO…';
+    ind.style.transition='transform .15s ease';
+    ind.style.transform='translateY(0)';
+    var recarga=function(){ location.reload(); };
+    var t=setTimeout(recarga, 1500);                    /* que nada lo deje colgado */
+    if(navigator.serviceWorker && navigator.serviceWorker.getRegistration){
+      navigator.serviceWorker.getRegistration()
+        .then(function(r){ return r ? r.update() : null; })
+        .then(function(){ clearTimeout(t); recarga(); })
+        .catch(function(){ clearTimeout(t); recarga(); });
+    } else { clearTimeout(t); recarga(); }
+  }, {passive:true});
+
+  document.addEventListener('touchcancel', function(){
+    if(y0==null) return; y0=null; dist=0; guarda();
+  }, {passive:true});
+})();
 })();
 </script>

@@ -26,9 +26,12 @@ self.addEventListener('fetch', e => {
   if (url.origin !== self.location.origin) return; // recursos externos van directo a la red
 
   // El documento HTML: red primero (para recibir actualizaciones), caché si no hay red.
+  // `cache:'reload'` salta el caché HTTP del navegador: GitHub Pages manda el HTML
+  // con max-age, y sin esto una recarga podía devolver una copia de hace minutos —
+  // justo el síntoma de "hice el cambio y no lo veo".
   if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(req)
+      fetch(req.url, { cache: 'reload', credentials: 'same-origin' })
         .then(res => { const copy = res.clone();
                        caches.open(CACHE).then(c => c.put('./index.html', copy)).catch(() => {});
                        return res; })
