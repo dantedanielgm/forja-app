@@ -1392,8 +1392,13 @@ function hoyRender(){
 
   /* ejercicio: los diarios de postura + la sesión si toca */
   html+='<div class="hy-sec">EJERCICIO</div>';
+  /* la dosis postural diaria: entre semana vive en las alarmas del trabajo;
+     el finde no hay alarmas — es la misma dosis, a cualquier hora */
   html+='<div class="hy-it"><span style="width:26px;flex:none"></span><span class="txt">'+
-    'En cada alarma: <b>10 chin tucks</b> · marco de puerta 20 s · lengua</span></div>';
+    (esLV(ahora)
+      ?'En cada alarma: <b>10 chin tucks</b> · marco de puerta 20 s · lengua'
+      :'Hoy no hay alarmas (no trabajas): <b>3×10 chin tucks</b> + puerta 20 s '+
+       '<span style="color:var(--ceniza)">en cualquier momento — 2 min</span>')+'</span></div>';
   var fase=faseDe(st.carga.meta), F=FASES[fase];
   var lun=lunesDe(ahora), hechosSem=cuentaSemana(lun);
   if(fase>0&&F.dias.indexOf(ahora.getDay())>=0){
