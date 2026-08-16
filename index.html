@@ -32,6 +32,7 @@
   #cierreMes{order:25}
   #caminosCard{order:30}
   #entrenoCard{order:35}
+  #calCard{order:37}
   #cargaCard{order:40}
   #faseCard{order:45}
 
@@ -52,6 +53,41 @@
   .cm-ok{color:var(--chispa); font-weight:900}
   .cm-mal{color:#FF9A6B; font-weight:900}
   .cm-extra{font-size:11px; color:var(--ceniza); margin-top:3px}
+  /* CALENDARIO DEL MES
+     Lenguaje visual: el PLAN es contorno, lo HECHO es relleno.
+     Un mes bien trabajado se ve sólido de un vistazo. */
+  .cal-nav{display:flex; align-items:center; justify-content:center; gap:14px; margin:2px 0 9px}
+  .cal-fl{background:var(--hierro); color:var(--hueso); border:none; font-size:17px;
+    line-height:1; padding:5px 13px; cursor:pointer; font-family:inherit}
+  .cal-fl:disabled{opacity:.3; cursor:default}
+  .cal-mes{font-size:13px; font-weight:900; letter-spacing:2px; min-width:96px; text-align:center}
+  .cal-dow,.cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:2px}
+  .cal-dow span{font-size:9px; font-weight:900; letter-spacing:1px; color:var(--ceniza);
+    text-align:center; padding-bottom:3px}
+  .cal-d{background:var(--carbon); border:1px solid var(--hierro); min-height:52px;
+    padding:3px 2px 0; display:flex; flex-direction:column; align-items:center; gap:1px}
+  .cal-d.fuera{background:transparent; border-color:transparent}
+  .cal-d.hoy{border-color:var(--chispa)}
+  .cal-n{font-size:12px; font-weight:700; color:var(--ceniza); line-height:1.1}
+  .cal-n.ok{color:var(--hueso); font-weight:900}        /* peso registrado ese día */
+  .cal-d.hoy .cal-n{color:var(--chispa)}
+  .cal-tag{font-size:7.5px; font-weight:900; letter-spacing:.3px; line-height:1.25;
+    padding:1px 2px; width:100%; text-align:center; box-sizing:border-box; white-space:nowrap}
+  .cal-tag.ses{color:var(--brasa); border:1px solid var(--brasa)}
+  .cal-tag.ses.on{background:var(--brasa); color:var(--carbon); border-color:var(--brasa)}
+  .cal-tag.ses.ghost{color:var(--ceniza); border:1px dashed var(--hierro)}
+  .cal-tag.med{color:var(--chispa); border:1px solid var(--chispa); margin-top:1px}
+  .cal-tag.med.on{background:var(--chispa); color:var(--carbon)}
+  .cal-bar{margin-top:auto; margin-bottom:2px; height:3px; width:78%;
+    background:var(--hierro)}                            /* postura diaria: pendiente */
+  .cal-bar.on{background:var(--chispa)}                  /* postura diaria: hecha */
+  .cal-d.futuro .cal-bar{background:transparent; border-bottom:1px dotted var(--hierro); height:2px}
+  .cal-ley{margin-top:10px; padding-top:8px; border-top:1px solid var(--hierro);
+    font-size:11px; color:var(--ceniza); line-height:1.55}
+  .cal-ley b{color:var(--hueso)}
+  .cal-ley i{font-style:normal; font-weight:900}
+  .cal-sw{display:inline-block; width:9px; height:9px; vertical-align:-1px; margin-right:2px}
+
   /* PULL TO REFRESH */
   body{overscroll-behavior-y:contain}   /* que no dispare el gesto nativo del navegador */
   .pull-ind{position:fixed; top:0; left:0; right:0; z-index:98;
@@ -559,6 +595,20 @@
   <section class="card" id="entrenoCard">
     <p class="tit">Entreno de hoy <small id="rutTag"></small></p>
     <div id="rutBody"></div>
+  </section>
+
+  <!-- CALENDARIO DEL MES — el plan y lo hecho en un solo cuadro.
+       Todo sale de la fase vigente y de tus registros; nada está tecleado. -->
+  <section class="card" id="calCard">
+    <p class="tit">Calendario <small id="calTag"></small></p>
+    <div class="cal-nav">
+      <button class="cal-fl" id="calPrev" aria-label="Mes anterior">‹</button>
+      <span class="cal-mes num" id="calMes">—</span>
+      <button class="cal-fl" id="calNext" aria-label="Mes siguiente">›</button>
+    </div>
+    <div class="cal-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-ley" id="calLey"></div>
   </section>
 
   <!-- CARGA SEMANAL — el marcador sube cuando HACES, no cuando levantas más -->
@@ -1298,7 +1348,7 @@ function render(){
     }
   }
 
-  fotoRender(); chipsRender(reg); rutina(); carga(); faseRender(); lectura(); caminos(); medidas(); fechaNavRender(); hoyRender(); grafica(); mosaico(); semana(); cierreMes(); rutaRender(); renderMes(); perfilRender(); avisoBackup();
+  fotoRender(); chipsRender(reg); rutina(); carga(); faseRender(); calendario(); lectura(); caminos(); medidas(); fechaNavRender(); hoyRender(); grafica(); mosaico(); semana(); cierreMes(); rutaRender(); renderMes(); perfilRender(); avisoBackup();
 }
 
 /* ---- CARGA SEMANAL ----
@@ -2348,6 +2398,118 @@ function rutina(){
     b.onclick=function(){ tocaEjerc(limpiaNom(lista[+b.dataset.ej][0])); };
   });
 }
+
+/* ---- CALENDARIO DEL MES ----
+   Un cuadro con todos los días: qué toca (plan) y qué hiciste (registro).
+   Regla visual: el PLAN es contorno, lo HECHO es relleno.
+   Los días de sesión NO están tecleados: salen de FASES[fase].dias, así que
+   el calendario se reacomoda solo cuando sube de fase. */
+var calYM=null;                       /* null = mes actual; se fija al navegar */
+var RE_POST=/chin tuck|tor[áa]cica|marco de puerta/i;   /* lo diario, no hipertrofia */
+
+function calLim(){                    /* hasta dónde deja navegar */
+  var min=ymStr(), max=ymMax();
+  Object.keys(st.habits).forEach(function(d){ if(d.slice(0,7)<min) min=d.slice(0,7); });
+  st.weights.forEach(function(p){ if(p.d.slice(0,7)<min) min=p.d.slice(0,7); });
+  if(max<ymStr()) max=ymStr();
+  return {min:min, max:max};
+}
+function calendario(){
+  var ym=calYM||ymStr(), p=ym.split('-'), Y=+p[0], M=+p[1]-1;
+  var fase=faseDe(st.carga.meta), F=FASES[fase], Fsig=(fase<3?FASES[fase+1]:null);
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
+  var hoyS=hoyStr(hoy), lim=calLim();
+
+  document.getElementById('calMes').textContent=MESES[M]+' '+Y;
+  document.getElementById('calTag').textContent='fase '+fase+' · '+F.nom.toLowerCase();
+  document.getElementById('calPrev').disabled = ymSuma(ym,-1)<lim.min;
+  document.getElementById('calNext').disabled = ymSuma(ym, 1)>lim.max;
+
+  var pesoDe={}; st.weights.forEach(function(w){ pesoDe[w.d]=1; });
+  var medDe={};  (st.medidas||[]).forEach(function(m){ medDe[m.d]=1; });
+
+  var ultDia=new Date(Y,M+1,0).getDate();
+  var offset=(new Date(Y,M,1).getDay()+6)%7;      /* 0 = lunes, como el mosaico */
+  var g=document.getElementById('calGrid'); g.innerHTML='';
+  for(var i=0;i<offset;i++){
+    var hueco=document.createElement('div'); hueco.className='cal-d fuera'; g.appendChild(hueco);
+  }
+
+  var nSes=0, nSesOk=0, nPost=0, nPeso=0;
+  for(var dia=1;dia<=ultDia;dia++){
+    var fe=new Date(Y,M,dia), fs=hoyStr(fe), dow=fe.getDay();
+    var futuro=fe>hoy, esHoy=(fs===hoyS);
+    var cel=document.createElement('div');
+    cel.className='cal-d'+(esHoy?' hoy':'')+(futuro?' futuro':'');
+
+    var hechos=st.ejerc[fs]||[];
+    var hizoHip =hechos.some(function(n){ return !RE_POST.test(n); });
+    var hizoPost=hechos.some(function(n){ return  RE_POST.test(n); })
+                 || !!(st.habits[fs]&&st.habits[fs].l);
+
+    /* el número brilla si ese día se pesó */
+    var num=document.createElement('div');
+    num.className='cal-n num'+(pesoDe[fs]?' ok':'');
+    num.textContent=dia;
+    cel.appendChild(num);
+    if(pesoDe[fs]) nPeso++;
+
+    /* SESIÓN DE HIPERTROFIA */
+    var idx=F.dias.indexOf(dow), gIdx=Fsig?Fsig.dias.indexOf(dow):-1, tag=null;
+    if(idx>=0){
+      tag=document.createElement('div');
+      tag.className='cal-tag ses'+(hizoHip?' on':'');
+      tag.textContent=(dow===6?'CASA':'GYM')+(fase===3?(idx%2===0?' A':' B'):'');
+      if(!futuro){ nSes++; if(hizoHip) nSesOk++; }
+    } else if(gIdx>=0){
+      tag=document.createElement('div');
+      tag.className='cal-tag ses'+(hizoHip?' on':' ghost');
+      tag.textContent=(dow===6?'CASA':'GYM');
+    } else if(hizoHip){          /* entrenó un día que no tocaba: igual suma y se ve */
+      tag=document.createElement('div');
+      tag.className='cal-tag ses on'; tag.textContent='+';
+    }
+    if(tag) cel.appendChild(tag);
+
+    /* MEDICIÓN: día 1 completa (★ = + foto de perfil) · lunes cintura y cuello */
+    var esUno=(dia===1), esLun=(dow===1);
+    if(esUno||esLun||medDe[fs]){
+      var md=document.createElement('div');
+      md.className='cal-tag med'+(medDe[fs]?' on':'');
+      md.textContent=esUno?'MEDIR★':'MEDIR';
+      cel.appendChild(md);
+    }
+
+    /* LO DIARIO (postura y lengua): la barra de abajo */
+    var bar=document.createElement('div');
+    bar.className='cal-bar'+(hizoPost?' on':'');
+    cel.appendChild(bar);
+    if(hizoPost) nPost++;
+
+    g.appendChild(cel);
+  }
+
+  /* LEYENDA — adaptada a la fase, porque los días cambian con ella */
+  var esteMes=(ym===ymStr());
+  var l='<span class="cal-sw" style="background:var(--brasa)"></span><b>GYM / CASA</b> = sesión de '+
+        'hipertrofia. Contorno = te toca · relleno = la hiciste.<br>'+
+        '<span class="cal-sw" style="background:var(--chispa)"></span><b>MEDIR</b> = cintura y cuello '+
+        '(lunes). <i>★</i> el día 1 = medición completa + foto de perfil.<br>'+
+        '<span class="cal-sw" style="background:var(--chispa);height:3px"></span><b>Barra de abajo</b> = '+
+        'lo diario: chin tucks · torácica · lengua. Va todos los días.<br>'+
+        '<b>Número claro</b> = ese día te pesaste.';
+  if(Fsig) l+='<br><span class="cal-sw" style="border:1px dashed var(--ceniza)"></span>'+
+    'Los <b>punteados</b> son los días que se te abren en <b>fase '+(fase+1)+'</b> '+
+    '(te faltan '+(F.sig-st.carga.meta)+' de meta semanal).';
+  if(fase===0) l+='<br style="line-height:2.2"><b style="color:var(--chispa)">Fase 0: no hay día obligado.</b> '+
+    'Entrenes el día que entrenes, se pinta aquí y suma.';
+  if(esteMes) l+='<div style="margin-top:7px; padding-top:6px; border-top:1px solid var(--hierro)">'+
+    'Este mes hasta hoy: <b>'+nPeso+'</b> pesajes · <b>'+nPost+'</b> días de postura'+
+    (nSes?' · sesiones <b>'+nSesOk+'/'+nSes+'</b>':'')+'.</div>';
+  document.getElementById('calLey').innerHTML=l;
+}
+document.getElementById('calPrev').onclick=function(){ calYM=ymSuma(calYM||ymStr(),-1); calendario(); };
+document.getElementById('calNext').onclick=function(){ calYM=ymSuma(calYM||ymStr(), 1); calendario(); };
 
 /* ---- FASE: dónde estás y qué falta para la siguiente ---- */
 function faseRender(){
