@@ -52,6 +52,20 @@
   .cm-ok{color:var(--chispa); font-weight:900}
   .cm-mal{color:#FF9A6B; font-weight:900}
   .cm-extra{font-size:11px; color:var(--ceniza); margin-top:3px}
+  /* MODAL DEL DICCIONARIO DE EJERCICIOS */
+  .modal{display:none; position:fixed; inset:0; background:rgba(10,8,5,.88); z-index:99;
+    align-items:center; justify-content:center; padding:18px}
+  .modal.abierto{display:flex}
+  .modal-box{background:var(--panel); border:2px solid var(--brasa); max-width:400px; width:100%;
+    max-height:86vh; overflow-y:auto; padding:16px}
+  .modal-tit{font-size:16px; font-weight:900; letter-spacing:1px; color:var(--brasa); margin-bottom:10px}
+  .md-k{font-size:9.5px; font-weight:900; letter-spacing:2px; color:var(--ceniza); margin:10px 0 3px}
+  .md-t{font-size:13.5px; line-height:1.55; color:var(--hueso)}
+  .md-t.err{color:#FF9A6B}
+  .md-t.dosis{color:var(--chispa); font-weight:700}
+  /* cualquier nombre de ejercicio, clickeable */
+  .ej-link{border-bottom:1px dotted var(--brasa); cursor:pointer}
+
   /* HOY */
   .hy-it{display:flex; align-items:center; gap:10px; padding:7px 0;
     border-bottom:1px solid var(--hierro); font-size:13.5px; line-height:1.3}
@@ -395,6 +409,15 @@
     <h1>FORJA<i>.</i></h1>
     <div class="fecha" id="fecha"></div>
   </header>
+
+  <!-- DICCIONARIO DE EJERCICIOS: cualquier nombre de la app abre esto -->
+  <div class="modal" id="modalEj">
+    <div class="modal-box">
+      <div class="modal-tit" id="mdTit">—</div>
+      <div id="mdBody"></div>
+      <button class="btn" id="mdCerrar" style="width:100%; margin-top:12px">CERRAR</button>
+    </div>
+  </div>
 
   <div class="alarma" id="alarmaStorage">
     <b>⚠ Este navegador NO está guardando nada.</b><br>
@@ -1359,6 +1382,96 @@ function zonas(lun){
   });
   document.getElementById('zonasBody').innerHTML=html;
 }
+/* ---- DICCIONARIO DE EJERCICIOS ----
+   Fuente única. Cualquier nombre de ejercicio en la app lo abre.
+   DD no tiene que recordar qué era "lengua" ni cómo se hace un face pull. */
+var EXPLICA=[
+  {re:/chin tuck/i, n:'Chin tucks', dosis:'3×10 · 3 seg cada uno · DIARIO',
+   como:'Sentado o de pie, mirada al frente. Lleva el <b>mentón hacia atrás</b>, como haciendo papada, sin agachar la cabeza. Sostén 3 segundos y suelta.',
+   clave:'El movimiento es hacia <b>ATRÁS</b>, no hacia abajo. La mirada nunca baja.',
+   err:'Bajar la barbilla al pecho — eso es otro ejercicio y no corrige nada.'},
+  {re:/marco de puerta|puerta/i, n:'Estiramiento en marco de puerta', dosis:'20-30 seg · varias veces al día',
+   como:'Antebrazos apoyados en el marco, <b>codos a la altura de los hombros</b>. Da un paso adelante hasta sentir que el pecho se abre.',
+   clave:'Se siente en el <b>pecho</b>. Deshace lo que la silla acumula.',
+   err:'Arquear la espalda baja para forzar más — el estiramiento se pierde.'},
+  {re:/tor[áa]cica/i, n:'Extensión torácica', dosis:'×10 · DIARIO',
+   como:'Espalda alta apoyada en el respaldo de una silla (o un rodillo). Manos detrás de la cabeza y <b>abre el pecho hacia atrás</b> sobre ese punto de apoyo.',
+   clave:'El movimiento ocurre en la espalda <b>ALTA</b>. Es la causa real de la cabeza adelantada.',
+   err:'Arquear la lumbar en vez de la zona alta.'},
+  {re:/lengua/i, n:'Lengua — deglución (4S)', dosis:'En cada comida + 10 seg en las pausas',
+   como:'<b>Punto:</b> lengua contra el paladar, detrás de los dientes de arriba. <b>Saliva:</b> junta saliva. <b>Aprieta:</b> dientes juntos y lengua arriba. <b>Traga.</b>',
+   clave:'La lengua <b>no debe tocar los dientes de adelante</b> al tragar. Corrige el empuje lingual que deforma la mordida.',
+   err:'Forzar. Si aparece dolor de mandíbula o clic, para y avísale a tu dentista.'},
+  {re:/jal[óo]n/i, n:'Jalón al pecho', dosis:'3×10',
+   como:'Sentado, agarre ancho. Jala la barra <b>al pecho</b>, con el pecho arriba y los codos hacia abajo y atrás. Sube controlado.',
+   clave:'Construye la <b>anchura de espalda</b> — es la V. Nunca jales a la nuca.',
+   err:'Balancearte hacia atrás para ayudarte con el peso.'},
+  {re:/remo/i, n:'Remo (con apoyo en pecho o sentado)', dosis:'3×10',
+   como:'Pecho contra la almohadilla (o espalda recta si es sentado). Jala hacia el abdomen y <b>junta los omóplatos</b> al final de cada repetición.',
+   clave:'<b>El ejercicio de tu postura.</b> El de apoyo en pecho es el mejor: la almohadilla impide compensar con la espalda baja.',
+   err:'Encorvarte o jalar con la espalda baja.'},
+  {re:/face pull/i, n:'Face pull', dosis:'3×15',
+   como:'Polea a la altura de la cara con cuerda. Jala <b>hacia la frente</b> separando las manos, con los codos altos.',
+   clave:'<b>Anti-joroba.</b> Los codos terminan a la altura o por detrás de los hombros. Rota el hombro hacia atrás.',
+   err:'Peso alto. Aquí ligero y limpio ES lo correcto.'},
+  {re:/puente de gl[úu]teo/i, n:'Puente de glúteos con peso', dosis:'3×12',
+   como:'Espalda alta apoyada en un banco, peso sobre la cadera. <b>Sube la cadera</b> hasta que el cuerpo quede recto.',
+   clave:'Aprieta el glúteo arriba y mantén el mentón metido. Glúteos + espalda baja.',
+   err:'Arquear la espalda baja en vez de extender la cadera.'},
+  {re:/rumano/i, n:'Peso muerto rumano ligero', dosis:'3×10',
+   como:'De pie con el peso en las manos. <b>Empuja la cadera hacia atrás</b> bajando el peso pegado a las piernas. Rodillas casi rectas.',
+   clave:'Se siente en la parte de atrás del muslo. Espalda baja, isquios y glúteo.',
+   err:'Redondear la espalda, o convertirlo en sentadilla doblando las rodillas.'},
+  {re:/prensa/i, n:'Prensa de piernas (pies altos)', dosis:'3×10',
+   como:'Pies al ancho de hombros, <b>altos en la plataforma</b>. Baja hasta ~90° de rodilla y empuja sin estirar del todo arriba.',
+   clave:'Pies altos = más glúteo e isquio, menos rodilla.',
+   err:'Bajar tanto que la cadera se despegue del asiento.'},
+  {re:/lateral/i, n:'Elevaciones laterales', dosis:'3×12',
+   como:'De pie con mancuernas <b>livianas (4-6 kg)</b>. Sube los brazos a los lados hasta la altura del hombro, codos apenas doblados. Baja lento.',
+   clave:'Construye la <b>anchura de hombros</b> — el numerador de tu ratio V.',
+   err:'Usar peso alto y balancearse. Aquí ligero ES lo correcto.'},
+  {re:/plancha/i, n:'Plancha', dosis:'3×20-30 seg',
+   como:'Antebrazos y puntas de los pies, <b>cuerpo en línea recta</b>. Aprieta abdomen y glúteos.',
+   clave:'Es el ejercicio más corto que existe: 2 minutos y tu semana deja de estar en cero.',
+   err:'Cadera arriba (pico) o caída (hamaca).'},
+  {re:/sentadilla/i, n:'Sentadillas al aire', dosis:'3×10',
+   como:'Pies al ancho de hombros. Baja como si te sentaras en una silla, <b>2 segundos bajando</b>.',
+   clave:'Rodillas siguen la dirección de la punta del pie. Pecho arriba.',
+   err:'Que las rodillas se metan hacia adentro.'},
+  {re:/mochila/i, n:'Remo con mochila', dosis:'3×10 por brazo',
+   como:'Mochila cargada de libros. Una mano apoyada en la mesa, espalda recta, <b>jala la mochila al costado</b> de tu cuerpo.',
+   clave:'El sustituto en casa del remo. Junta el omóplato al final.',
+   err:'Girar el torso para ayudarte.'}
+];
+function buscaExplica(n){
+  for(var i=0;i<EXPLICA.length;i++) if(EXPLICA[i].re.test(n)) return EXPLICA[i];
+  return null;
+}
+/* envuelve un nombre para que abra su explicación */
+function linkEj(nom, visible){
+  if(!buscaExplica(nom)) return visible||nom;
+  return '<span class="ej-link" data-ej-info="'+nom.replace(/"/g,'')+'">'+(visible||nom)+'</span>';
+}
+function abreEj(nom){
+  var e=buscaExplica(nom); if(!e) return;
+  document.getElementById('mdTit').textContent=e.n;
+  document.getElementById('mdBody').innerHTML=
+    '<div class="md-k">CUÁNTO</div><div class="md-t dosis">'+e.dosis+'</div>'+
+    '<div class="md-k">CÓMO SE HACE</div><div class="md-t">'+e.como+'</div>'+
+    '<div class="md-k">LA CLAVE</div><div class="md-t">'+e.clave+'</div>'+
+    '<div class="md-k">EL ERROR</div><div class="md-t err">✗ '+e.err+'</div>';
+  document.getElementById('modalEj').classList.add('abierto');
+}
+/* delegación: sirve para todo lo que se renderice después */
+document.addEventListener('click',function(ev){
+  var t=ev.target.closest?ev.target.closest('[data-ej-info]'):null;
+  if(t){ ev.stopPropagation(); abreEj(t.dataset.ejInfo); }
+});
+document.getElementById('mdCerrar').onclick=function(){ document.getElementById('modalEj').classList.remove('abierto'); };
+document.getElementById('modalEj').onclick=function(ev){
+  if(ev.target===this) this.classList.remove('abierto');
+};
+
 /* ---- HOY: la puerta de entrada ----
    Peso → lo que toca hoy (hábitos con su objetivo vigente, ejercicios
    diarios, sesión si toca) → el camino en dos líneas. Lo diario, junto. */
@@ -1388,9 +1501,8 @@ function hoyRender(){
     var label=/prote/i.test(h.label)?('Proteína <b>'+prot+' g</b>'+(prot>140-1&&prot!==130?' <span style="color:var(--ceniza)">(ritmo al borde)</span>':'')):h.label;
     /* la lengua se olvida: instrucciones siempre a la vista */
     if(/lengua/i.test(h.label))
-      label+='<br><span style="font-size:11px;color:var(--ceniza)">En cada comida: '+
-        '<b style="color:var(--ceniza)">Punto → Saliva → Aprieta → Traga</b> (lengua arriba, '+
-        'dientes juntos, sin que toque los dientes de adelante) · y lengua al paladar 10 s en las pausas</span>';
+      label=linkEj('lengua',label)+'<br><span style="font-size:11px;color:var(--ceniza)">En cada comida: '+
+        '<b style="color:var(--ceniza)">Punto → Saliva → Aprieta → Traga</b> · toca para el detalle</span>';
     html+='<div class="hy-it'+(on?' hecho':'')+'"><button class="rut-chk'+(on?' on':'')+'" data-h="'+h.k+'">✓</button>'+
       '<span class="txt">'+label+'</span></div>';
   });
@@ -1401,9 +1513,9 @@ function hoyRender(){
      el finde no hay alarmas — es la misma dosis, a cualquier hora */
   html+='<div class="hy-it"><span style="width:26px;flex:none"></span><span class="txt">'+
     (esLV(ahora)
-      ?'En cada alarma: <b>10 chin tucks</b> · marco de puerta 20 s · lengua'
-      :'Hoy no hay alarmas (no trabajas): <b>3×10 chin tucks</b> + puerta 20 s '+
-       '<span style="color:var(--ceniza)">en cualquier momento — 2 min</span>')+'</span></div>';
+      ?'En cada alarma: '+linkEj('chin tucks','<b>10 chin tucks</b>')+' · '+linkEj('marco de puerta','marco de puerta 20 s')+' · '+linkEj('lengua','lengua')
+      :'Hoy no hay alarmas (no trabajas): '+linkEj('chin tucks','<b>3×10 chin tucks</b>')+' + '+linkEj('marco de puerta','puerta 20 s')+
+       ' <span style="color:var(--ceniza)">en cualquier momento — 2 min</span>')+'</span></div>';
   var fase=faseDe(st.carga.meta), F=FASES[fase];
   var lun=lunesDe(ahora), hechosSem=cuentaSemana(lun);
 
@@ -1487,7 +1599,7 @@ function semanaEjerc(){
     }).join('')+'</tr>';
   pool.forEach(function(x,r){
     var nom=limpiaNom(x[0]);
-    html+='<tr><td class="nm" title="'+nom+'">'+nom+'</td>'+
+    html+='<tr><td class="nm" title="'+nom+'">'+linkEj(nom)+'</td>'+
       fechas.map(function(f,c){
         var on=(st.ejerc[f]||[]).indexOf(nom)>=0;
         var fut=f>hoy;
@@ -2186,7 +2298,7 @@ function filasEjerc(lista, nota){
     var chk=esEj?'<button class="rut-chk'+(on?' on':'')+'" data-ej="'+idx+'" aria-label="Marcar '+nom+'">✓</button>'
                 :'<span style="width:26px;flex:none"></span>';
     var ver=x[2]?'<a class="rut-ver" href="'+x[2]+'" target="_blank" rel="noopener">▶ VER</a>':'';
-    return '<div class="rut-ej">'+chk+'<span>'+x[0]+'</span><span class="rr num">'+x[1]+'</span>'+ver+'</div>';
+    return '<div class="rut-ej">'+chk+'<span>'+linkEj(nom,x[0])+'</span><span class="rr num">'+x[1]+'</span>'+ver+'</div>';
   }).join('')+'<div class="rut-nota">'+nota+'</div>';
   return html;
 }
