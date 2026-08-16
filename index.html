@@ -75,12 +75,12 @@
     padding:1px 2px; width:100%; text-align:center; box-sizing:border-box; white-space:nowrap}
   .cal-tag.ses{color:var(--brasa); border:1px solid var(--brasa)}
   .cal-tag.ses.on{background:var(--brasa); color:var(--carbon); border-color:var(--brasa)}
-  .cal-tag.ses.ghost{color:var(--ceniza); border:1px dashed var(--hierro)}
+  .cal-tag.ses.ghost{color:var(--brasa); opacity:.5; border:1px dashed var(--brasa)}
   .cal-tag.med{color:var(--chispa); border:1px solid var(--chispa); margin-top:1px}
   .cal-tag.med.on{background:var(--chispa); color:var(--carbon)}
   .cal-bar{margin-top:auto; margin-bottom:2px; height:3px; width:78%;
     background:var(--hierro)}                            /* postura diaria: pendiente */
-  .cal-bar.on{background:var(--chispa)}                  /* postura diaria: hecha */
+  .cal-bar.on{background:var(--hueso)}                   /* postura diaria: hecha — distinto de MEDIR (chispa) */
   .cal-d.futuro .cal-bar{background:transparent; border-bottom:1px dotted var(--hierro); height:2px}
   .cal-ley{margin-top:10px; padding-top:8px; border-top:1px solid var(--hierro);
     font-size:11px; color:var(--ceniza); line-height:1.55}
@@ -2495,10 +2495,10 @@ function calendario(){
         'hipertrofia. Contorno = te toca · relleno = la hiciste.<br>'+
         '<span class="cal-sw" style="background:var(--chispa)"></span><b>MEDIR</b> = cintura y cuello '+
         '(lunes). <i>★</i> el día 1 = medición completa + foto de perfil.<br>'+
-        '<span class="cal-sw" style="background:var(--chispa);height:3px"></span><b>Barra de abajo</b> = '+
+        '<span class="cal-sw" style="background:var(--hueso);height:3px"></span><b>Barra de abajo</b> = '+
         'lo diario: chin tucks · torácica · lengua. Va todos los días.<br>'+
         '<b>Número claro</b> = ese día te pesaste.';
-  if(Fsig) l+='<br><span class="cal-sw" style="border:1px dashed var(--ceniza)"></span>'+
+  if(Fsig) l+='<br><span class="cal-sw" style="border:1px dashed var(--brasa)"></span>'+
     'Los <b>punteados</b> son los días que se te abren en <b>fase '+(fase+1)+'</b> '+
     '(te faltan '+(F.sig-st.carga.meta)+' de meta semanal).';
   if(fase===0) l+='<br style="line-height:2.2"><b style="color:var(--chispa)">Fase 0: no hay día obligado.</b> '+
