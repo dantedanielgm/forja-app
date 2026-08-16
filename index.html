@@ -1511,7 +1511,11 @@ function hoyRender(){
   html+='<div class="hy-sec">EJERCICIO</div>';
   /* la dosis postural diaria: entre semana vive en las alarmas del trabajo;
      el finde no hay alarmas — es la misma dosis, a cualquier hora */
-  html+='<div class="hy-it"><span style="width:26px;flex:none"></span><span class="txt">'+
+  /* marcable: cae en 'Chin tucks' de la rejilla semanal y suma a la zona POSTURA */
+  var chinHecho=(st.ejerc[f]||[]).indexOf('Chin tucks')>=0;
+  html+='<div class="hy-it'+(chinHecho?' hecho':'')+'">'+
+    '<button class="rut-chk'+(chinHecho?' on':'')+'" data-ejd="Chin tucks">✓</button>'+
+    '<span class="txt">'+
     (esLV(ahora)
       ?'En cada alarma: '+linkEj('chin tucks','<b>10 chin tucks</b>')+' · '+linkEj('marco de puerta','marco de puerta 20 s')+' · '+linkEj('lengua','lengua')
       :'Hoy no hay alarmas (no trabajas): '+linkEj('chin tucks','<b>3×10 chin tucks</b>')+' + '+linkEj('marco de puerta','puerta 20 s')+
@@ -1546,7 +1550,10 @@ function hoyRender(){
 
   document.getElementById('hoyLista').innerHTML=html;
   [].slice.call(document.getElementById('hoyLista').querySelectorAll('.rut-chk')).forEach(function(b){
-    b.onclick=function(){ tocaHoy(b.dataset.h); };
+    b.onclick=function(){
+      if(b.dataset.ejd) tocaEjercEn(b.dataset.ejd, hoyStr());   /* va a la rejilla semanal */
+      else tocaHoy(b.dataset.h);
+    };
   });
   [].slice.call(document.getElementById('hoyLista').querySelectorAll('.hy-go')).forEach(function(b){
     b.onclick=function(){ document.getElementById(b.dataset.go).scrollIntoView({behavior:'smooth'}); };
