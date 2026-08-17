@@ -118,6 +118,11 @@
   .cal-det-e:last-of-type{border-bottom:none}
   .cal-det-e .rep{color:var(--ceniza); flex:none; font-family:Consolas,ui-monospace,monospace}
   .cal-det-n{font-size:11px; color:var(--ceniza); margin-top:7px; line-height:1.5}
+  .cal-det-k{font-size:9.5px; font-weight:900; letter-spacing:1.5px; color:var(--ceniza);
+    margin:11px 0 4px; padding-top:8px; border-top:1px solid var(--hierro)}
+  .cal-det-k:first-of-type{margin-top:2px; padding-top:0; border-top:none}
+  .cal-sl-n{font-size:11px; color:var(--ceniza); line-height:1.5; margin-top:7px}
+  .cal-sl-n b{color:var(--chispa)}
   .cal-d{cursor:pointer}
 
   .cal-ley{margin-top:10px; padding-top:8px; border-top:1px solid var(--hierro);
@@ -145,6 +150,13 @@
   .md-t{font-size:13.5px; line-height:1.55; color:var(--hueso)}
   .md-t.err{color:#FF9A6B}
   .md-t.dosis{color:var(--chispa); font-weight:700}
+  /* pie del diccionario: leerlo arriba, verlo abajo */
+  .md-vid{display:block; margin-top:14px; background:var(--brasa); color:var(--carbon);
+    text-decoration:none; text-align:center; font-size:12px; font-weight:900;
+    letter-spacing:1.5px; padding:11px 8px}
+  .md-vid.buscar{background:none; color:var(--ceniza); border:1px solid var(--hierro);
+    font-size:10.5px; letter-spacing:1px}
+  .md-vid:focus-visible{outline:2px solid var(--chispa); outline-offset:2px}
   /* cualquier nombre de ejercicio, clickeable */
   .ej-link{border-bottom:1px dotted var(--brasa); cursor:pointer}
 
@@ -1488,7 +1500,7 @@ function zonas(lun){
    Fuente única. Cualquier nombre de ejercicio en la app lo abre.
    DD no tiene que recordar qué era "lengua" ni cómo se hace un face pull. */
 var EXPLICA=[
-  {re:/chin tuck/i, n:'Chin tucks', dosis:'3×10 · 3 seg cada uno · DIARIO',
+  {re:/chin tuck/i, n:'Chin tucks', vid:"chin", dosis:'3×10 · 3 seg cada uno · DIARIO',
    como:'Sentado o de pie, mirada al frente. Lleva el <b>mentón hacia atrás</b>, como haciendo papada, sin agachar la cabeza. Sostén 3 segundos y suelta.',
    clave:'El movimiento es hacia <b>ATRÁS</b>, no hacia abajo. La mirada nunca baja.',
    err:'Bajar la barbilla al pecho — eso es otro ejercicio y no corrige nada.'},
@@ -1496,7 +1508,7 @@ var EXPLICA=[
    como:'Antebrazos apoyados en el marco, <b>codos a la altura de los hombros</b>. Da un paso adelante hasta sentir que el pecho se abre.',
    clave:'Se siente en el <b>pecho</b>. Deshace lo que la silla acumula.',
    err:'Arquear la espalda baja para forzar más — el estiramiento se pierde.'},
-  {re:/tor[áa]cica/i, n:'Extensión torácica', dosis:'×10 · DIARIO',
+  {re:/tor[áa]cica/i, n:'Extensión torácica', vid:"torax", dosis:'×10 · DIARIO',
    como:'Espalda alta apoyada en el respaldo de una silla (o un rodillo). Manos detrás de la cabeza y <b>abre el pecho hacia atrás</b> sobre ese punto de apoyo.',
    clave:'El movimiento ocurre en la espalda <b>ALTA</b>. Es la causa real de la cabeza adelantada.',
    err:'Arquear la lumbar en vez de la zona alta.'},
@@ -1504,35 +1516,36 @@ var EXPLICA=[
    como:'<b>Punto:</b> lengua contra el paladar, detrás de los dientes de arriba. <b>Saliva:</b> junta saliva. <b>Aprieta:</b> dientes juntos y lengua arriba. <b>Traga.</b>',
    clave:'La lengua <b>no debe tocar los dientes de adelante</b> al tragar. Corrige el empuje lingual que deforma la mordida.',
    err:'Forzar. Si aparece dolor de mandíbula o clic, para y avísale a tu dentista.'},
-  {re:/jal[óo]n/i, n:'Jalón al pecho', dosis:'3×10',
+  {re:/jal[óo]n/i, n:'Jalón al pecho', vid:"jalon", dosis:'3×10',
    como:'Sentado, agarre ancho. Jala la barra <b>al pecho</b>, con el pecho arriba y los codos hacia abajo y atrás. Sube controlado.',
    clave:'Construye la <b>anchura de espalda</b> — es la V. Nunca jales a la nuca.',
    err:'Balancearte hacia atrás para ayudarte con el peso.'},
-  {re:/remo/i, n:'Remo (con apoyo en pecho o sentado)', dosis:'3×10',
+  /* el lookahead evita que se trague "Remo con mochila", que es otro ejercicio */
+  {re:/remo(?! con mochila)/i, n:'Remo (con apoyo en pecho o sentado)', vid:"remo", dosis:'3×10',
    como:'Pecho contra la almohadilla (o espalda recta si es sentado). Jala hacia el abdomen y <b>junta los omóplatos</b> al final de cada repetición.',
    clave:'<b>El ejercicio de tu postura.</b> El de apoyo en pecho es el mejor: la almohadilla impide compensar con la espalda baja.',
    err:'Encorvarte o jalar con la espalda baja.'},
-  {re:/face pull/i, n:'Face pull', dosis:'3×15',
+  {re:/face pull/i, n:'Face pull', vid:"face", dosis:'3×15',
    como:'Polea a la altura de la cara con cuerda. Jala <b>hacia la frente</b> separando las manos, con los codos altos.',
    clave:'<b>Anti-joroba.</b> Los codos terminan a la altura o por detrás de los hombros. Rota el hombro hacia atrás.',
    err:'Peso alto. Aquí ligero y limpio ES lo correcto.'},
-  {re:/puente de gl[úu]teo/i, n:'Puente de glúteos con peso', dosis:'3×12',
+  {re:/puente de gl[úu]teo/i, n:'Puente de glúteos con peso', vid:"gluteo", dosis:'3×12',
    como:'Espalda alta apoyada en un banco, peso sobre la cadera. <b>Sube la cadera</b> hasta que el cuerpo quede recto.',
    clave:'Aprieta el glúteo arriba y mantén el mentón metido. Glúteos + espalda baja.',
    err:'Arquear la espalda baja en vez de extender la cadera.'},
-  {re:/rumano/i, n:'Peso muerto rumano ligero', dosis:'3×10',
+  {re:/rumano/i, n:'Peso muerto rumano ligero', vid:"rumano", dosis:'3×10',
    como:'De pie con el peso en las manos. <b>Empuja la cadera hacia atrás</b> bajando el peso pegado a las piernas. Rodillas casi rectas.',
    clave:'Se siente en la parte de atrás del muslo. Espalda baja, isquios y glúteo.',
    err:'Redondear la espalda, o convertirlo en sentadilla doblando las rodillas.'},
-  {re:/prensa/i, n:'Prensa de piernas (pies altos)', dosis:'3×10',
+  {re:/prensa/i, n:'Prensa de piernas (pies altos)', vid:"prensa", dosis:'3×10',
    como:'Pies al ancho de hombros, <b>altos en la plataforma</b>. Baja hasta ~90° de rodilla y empuja sin estirar del todo arriba.',
    clave:'Pies altos = más glúteo e isquio, menos rodilla.',
    err:'Bajar tanto que la cadera se despegue del asiento.'},
-  {re:/lateral/i, n:'Elevaciones laterales', dosis:'3×12',
+  {re:/lateral/i, n:'Elevaciones laterales', vid:"lateral", dosis:'3×12',
    como:'De pie con mancuernas <b>livianas (4-6 kg)</b>. Sube los brazos a los lados hasta la altura del hombro, codos apenas doblados. Baja lento.',
    clave:'Construye la <b>anchura de hombros</b> — el numerador de tu ratio V.',
    err:'Usar peso alto y balancearse. Aquí ligero ES lo correcto.'},
-  {re:/plancha/i, n:'Plancha', dosis:'3×20-30 seg',
+  {re:/plancha/i, n:'Plancha', vid:"plancha", dosis:'3×20-30 seg',
    como:'Antebrazos y puntas de los pies, <b>cuerpo en línea recta</b>. Aprieta abdomen y glúteos.',
    clave:'Es el ejercicio más corto que existe: 2 minutos y tu semana deja de estar en cero.',
    err:'Cadera arriba (pico) o caída (hamaca).'},
@@ -1554,6 +1567,16 @@ function linkEj(nom, visible){
   if(!buscaExplica(nom)) return visible||nom;
   return '<span class="ej-link" data-ej-info="'+nom.replace(/"/g,'')+'">'+(visible||nom)+'</span>';
 }
+/* Leerlo y verlo: el pie del diccionario siempre lleva a un video.
+   Si hay uno curado se abre ese; si no, una búsqueda — no invento enlaces. */
+function videoDe(e){
+  var url=e.vid?V[e.vid]:null;
+  if(url) return '<a class="md-vid" href="'+url+'" target="_blank" rel="noopener">'+
+                 '▶ VER EL MOVIMIENTO EN VIDEO</a>';
+  return '<a class="md-vid buscar" href="https://www.youtube.com/results?search_query='+
+         encodeURIComponent(e.n+' cómo se hace')+'" target="_blank" rel="noopener">'+
+         '🔍 BUSCAR VIDEO — no tengo uno fijo para este</a>';
+}
 function abreEj(nom){
   var e=buscaExplica(nom); if(!e) return;
   document.getElementById('mdTit').textContent=e.n;
@@ -1561,7 +1584,8 @@ function abreEj(nom){
     '<div class="md-k">CUÁNTO</div><div class="md-t dosis">'+e.dosis+'</div>'+
     '<div class="md-k">CÓMO SE HACE</div><div class="md-t">'+e.como+'</div>'+
     '<div class="md-k">LA CLAVE</div><div class="md-t">'+e.clave+'</div>'+
-    '<div class="md-k">EL ERROR</div><div class="md-t err">✗ '+e.err+'</div>';
+    '<div class="md-k">EL ERROR</div><div class="md-t err">✗ '+e.err+'</div>'+
+    videoDe(e);
   document.getElementById('modalEj').classList.add('abierto');
 }
 /* delegación: sirve para todo lo que se renderice después */
@@ -2615,15 +2639,18 @@ function calSesLista(fase){
            '</div><div class="cal-sl-e">'+cont+'</div></div>';
   }
   var html='<div class="cal-sl-k">QUÉ TOCA CADA DÍA — TOCA UNA CASILLA PARA EL DETALLE</div>';
-  if(fase===0){
-    html+=fila('LIBRE', ejs(poolCompleto()));
-  } else {
-    F.dias.forEach(function(d,idx){
-      html+=fila(DIA_NOM[d]+'<br>'+(d===6?'CASA':'GYM')+(fase===3?(idx%2===0?' A':' B'):''),
-                 ejs(sesionDe(fase,idx)));
-    });
-  }
+  /* En fase 0 no hay días fijos, pero el gym de mar/jue SÍ es su plan:
+     se muestra la sesión de la fase 1 para que un día de gym no parezca
+     una lista de ejercicios de casa. */
+  var Fmuestra = fase===0 ? FASES[1] : F, faseMuestra = fase===0 ? 1 : fase;
+  Fmuestra.dias.forEach(function(d,idx){
+    html+=fila(DIA_NOM[d]+'<br>'+(d===6?'CASA':'GYM')+(faseMuestra===3?(idx%2===0?' A':' B'):''),
+               ejs(sesionDe(faseMuestra,idx)));
+  });
   html+=fila('TODOS<br>LOS DÍAS', ejs(DIARIO), ' diario');
+  if(fase===0) html+='<div class="cal-sl-n"><b>Fase 0:</b> con <b>UN</b> ejercicio ya cumples '+
+    'la semana. Esa es la sesión completa del gym cuando quieras hacerla entera — '+
+    'y cualquier otro del pool también suma.</div>';
   el.innerHTML=html;
 }
 
@@ -2637,31 +2664,51 @@ function calDetalle(fs){
   var real=!calPerf, fase=real?faseDe(st.carga.meta):3, F=FASES[fase];
   var idx=F.dias.indexOf(dow), hechos=real?(st.ejerc[fs]||[]):[];
 
+  /* Si tu fase todavía no fija días, la sesión que corresponde es la de la
+     fase siguiente que sí incluye este día. En fase 0 eso hace que un martes
+     muestre la sesión de GYM (que es tu plan) y no una lista de casa. */
+  var faseSes=fase, idxSes=idx, previo=false;
+  if(idx<0){
+    for(var f2=fase+1; f2<=3; f2++){
+      var j=FASES[f2].dias.indexOf(dow);
+      if(j>=0){ faseSes=f2; idxSes=j; previo=true; break; }
+    }
+  }
+  var haySes=(idxSes>=0), esCasa=(dow===6);
+
   var h='<div class="cal-det-t"><span>'+DIA_NOM[dow]+' '+fe.getDate()+' '+MESES[fe.getMonth()]+
-        (idx>=0?' · '+(dow===6?'CASA':'GYM 6:00-6:45')+' · SESIÓN '+(idx+1)+'/'+F.ses:'')+
+        (haySes?' · '+(esCasa?'CASA':'GYM 6:00-6:45')+
+                (previo?'':' · SESIÓN '+(idxSes+1)+'/'+F.ses):'')+
         (real?'':' · PERFECTO')+'</span><button data-cerrar-det>✕</button></div>';
-  function linea(nom,rep,marcable){
+  function linea(nom,rep){
     var on=hechos.indexOf(nom)>=0;
     return '<div class="cal-det-e"><span>'+(on?'✓ ':'')+linkEj(nom)+'</span>'+
            '<span class="rep">'+rep+'</span></div>';
   }
-  if(idx>=0){
-    h+=[RAMPA].concat(sesionDe(fase,idx),[WHEY]).map(function(x){
+  /* SIEMPRE dos bloques separados: la sesión es una cosa, lo diario es otra.
+     Mezclarlos fue lo que hizo parecer que un día de gym eran chin tucks. */
+  if(haySes){
+    h+='<div class="cal-det-k">'+(esCasa?'EN CASA':'EN EL GIMNASIO')+
+       (previo?' — TU PLAN':'')+'</div>';
+    h+=[RAMPA].concat(sesionDe(faseSes,idxSes),[WHEY]).map(function(x){
       return linea(limpiaNom(x[0]),x[1]);
     }).join('');
-    h+='<div class="cal-det-n">Llévalo cerca del fallo · el peso da igual. '+
-       'Toca cualquier nombre para ver cómo se hace.</div>';
-  } else if(fase===0){
-    h+=DIARIO.map(function(x){ return linea(x[0],x[1]); }).join('');
-    h+='<div class="cal-det-n"><b style="color:var(--chispa)">Fase 0: no hay día obligado.</b> '+
-       'Cualquiera del pool que hagas suma — están listados abajo.</div>';
+    h+='<div class="cal-det-n">Llévalo cerca del fallo · el peso da igual.'+
+       (previo
+         ? ' <b style="color:var(--chispa)">Tu fase '+fase+' aún no lo exige</b> — con '+
+           (fase===0?'UNO':'lo que hagas')+' ya sumas la semana. Esta es la sesión entera si vas.'
+         : '')+'</div>';
+  }
+  h+='<div class="cal-det-k">LO DIARIO — EN CUALQUIER LADO</div>';
+  h+=DIARIO.map(function(x){ return linea(x[0],x[1]); }).join('');
+  if(!haySes){
+    var prox=null, Fp=FASES[fase===0?1:fase];
+    for(var i=1;i<=7;i++){ if(Fp.dias.indexOf((dow+i)%7)>=0){ prox=(dow+i)%7; break; } }
+    h+='<div class="cal-det-n">Este día no toca sesión. Próxima: '+
+       '<b style="color:var(--brasa)">'+DIA_NOM[prox]+'</b>. Si igual entrenas, suma.</div>';
   } else {
-    h+=DIARIO.map(function(x){ return linea(x[0],x[1]); }).join('');
-    var prox=null;
-    for(var i=1;i<=7;i++){ if(F.dias.indexOf((dow+i)%7)>=0){ prox=(dow+i)%7; break; } }
-    h+='<div class="cal-det-n">Sin sesión este día — solo lo diario. '+
-       'Próxima: <b style="color:var(--brasa)">'+DIA_NOM[prox]+'</b>. '+
-       'Si igual entrenas, suma.</div>';
+    h+='<div class="cal-det-n">Esto va igual haya gym o no. '+
+       'Toca cualquier nombre para ver cómo se hace y su video.</div>';
   }
   det.innerHTML=h;
   det.style.display='block';
