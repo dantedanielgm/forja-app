@@ -93,6 +93,33 @@
     background:var(--hierro)}                            /* postura diaria: pendiente */
   .cal-bar.on{background:var(--hueso)}                   /* postura diaria: hecha — distinto de MEDIR (chispa) */
   .cal-d.futuro .cal-bar{background:transparent; border-bottom:1px dotted var(--hierro); height:2px}
+  /* QUÉ TOCA CADA DÍA: la composición de cada sesión, fija bajo la rejilla.
+     Las sesiones se repiten por día de la semana, así que estas pocas
+     líneas describen el mes entero. */
+  .cal-ses-lista{margin-top:11px}
+  .cal-sl-k{font-size:9.5px; font-weight:900; letter-spacing:1.5px; color:var(--ceniza); margin-bottom:5px}
+  .cal-sl{display:flex; gap:8px; padding:6px 0; border-bottom:1px solid var(--hierro); font-size:11.5px}
+  .cal-sl:last-child{border-bottom:none}
+  .cal-sl-d{flex:none; width:62px; font-weight:900; font-size:10px; letter-spacing:.5px;
+    color:var(--brasa); line-height:1.5}
+  .cal-sl-d.diario{color:var(--hueso)}
+  .cal-sl-e{line-height:1.6; color:var(--hueso)}
+  .cal-sl-e .rep{color:var(--ceniza); font-size:10.5px}
+  .cal-sl-e .sep{color:var(--brasa)}   /* visible: si no, los nombres se leen pegados */
+
+  /* DETALLE DE UN DÍA: aparece al tocar una casilla */
+  .cal-det{margin-top:10px; border:1px solid var(--brasa); padding:9px 10px}
+  .cal-det-t{font-size:10.5px; font-weight:900; letter-spacing:1.5px; color:var(--brasa);
+    display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:7px}
+  .cal-det-t button{background:none; border:none; color:var(--ceniza); font-size:15px;
+    line-height:1; padding:0 2px; cursor:pointer; font-family:inherit}
+  .cal-det-e{display:flex; justify-content:space-between; gap:8px; font-size:12px;
+    padding:4px 0; border-bottom:1px solid var(--hierro); line-height:1.4}
+  .cal-det-e:last-of-type{border-bottom:none}
+  .cal-det-e .rep{color:var(--ceniza); flex:none; font-family:Consolas,ui-monospace,monospace}
+  .cal-det-n{font-size:11px; color:var(--ceniza); margin-top:7px; line-height:1.5}
+  .cal-d{cursor:pointer}
+
   .cal-ley{margin-top:10px; padding-top:8px; border-top:1px solid var(--hierro);
     font-size:11px; color:var(--ceniza); line-height:1.55}
   .cal-ley b{color:var(--hueso)}
@@ -620,6 +647,8 @@
     <div class="cal-aviso" id="calAviso" style="display:none"></div>
     <div class="cal-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
     <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-det" id="calDet" style="display:none"></div>
+    <div class="cal-ses-lista" id="calSesLista"></div>
     <div class="cal-ley" id="calLey"></div>
   </section>
 
@@ -2522,7 +2551,17 @@ function calendario(){
     cel.appendChild(bar);
     if(hizoPost) nPost++;
 
+    cel.dataset.f=fs;                     /* tocar la casilla abre el detalle del día */
     g.appendChild(cel);
+  }
+  g.onclick=function(ev){
+    var c=ev.target.closest?ev.target.closest('.cal-d[data-f]'):null;
+    if(c) calDetalle(c.dataset.f);
+  };
+  calSesLista(fase);
+  if(calDiaAbierto){                      /* si cambió de mes o de modo, recalcula el abierto */
+    var v=calDiaAbierto; calDiaAbierto=null;
+    if(v.slice(0,7)===ym) calDetalle(v); else document.getElementById('calDet').style.display='none';
   }
 
   /* LEYENDA — adaptada a la fase, porque los días cambian con ella */
@@ -2557,6 +2596,78 @@ function calendario(){
   }
   document.getElementById('calLey').innerHTML=l;
 }
+/* LO DIARIO — lo mismo que pide la tarjeta HOY, en una sola fuente */
+var DIARIO=[['Chin tucks','3×10'],['Extensión torácica','×10'],
+            ['Estiramiento en marco de puerta','20 s'],['Lengua — deglución (4S)','cada comida']];
+
+/* QUÉ TOCA CADA DÍA — las sesiones se repiten por día de la semana, así que
+   estas pocas líneas describen el mes entero sin tener que tocar 18 casillas. */
+function calSesLista(fase){
+  var el=document.getElementById('calSesLista'), F=FASES[fase];
+  function ejs(lista){
+    return lista.map(function(x){
+      var n=limpiaNom(x[0]);
+      return linkEj(n)+' <span class="rep">'+x[1]+'</span>';
+    }).join('<span class="sep"> · </span>');
+  }
+  function fila(et,cont,clase){
+    return '<div class="cal-sl"><div class="cal-sl-d'+(clase||'')+'">'+et+
+           '</div><div class="cal-sl-e">'+cont+'</div></div>';
+  }
+  var html='<div class="cal-sl-k">QUÉ TOCA CADA DÍA — TOCA UNA CASILLA PARA EL DETALLE</div>';
+  if(fase===0){
+    html+=fila('LIBRE', ejs(poolCompleto()));
+  } else {
+    F.dias.forEach(function(d,idx){
+      html+=fila(DIA_NOM[d]+'<br>'+(d===6?'CASA':'GYM')+(fase===3?(idx%2===0?' A':' B'):''),
+                 ejs(sesionDe(fase,idx)));
+    });
+  }
+  html+=fila('TODOS<br>LOS DÍAS', ejs(DIARIO), ' diario');
+  el.innerHTML=html;
+}
+
+/* DETALLE DE UN DÍA — exactamente qué hacer esa fecha */
+var calDiaAbierto=null;
+function calDetalle(fs){
+  var det=document.getElementById('calDet');
+  if(!fs||calDiaAbierto===fs){ calDiaAbierto=null; det.style.display='none'; return; }
+  calDiaAbierto=fs;
+  var fe=pd(fs), dow=fe.getDay();
+  var real=!calPerf, fase=real?faseDe(st.carga.meta):3, F=FASES[fase];
+  var idx=F.dias.indexOf(dow), hechos=real?(st.ejerc[fs]||[]):[];
+
+  var h='<div class="cal-det-t"><span>'+DIA_NOM[dow]+' '+fe.getDate()+' '+MESES[fe.getMonth()]+
+        (idx>=0?' · '+(dow===6?'CASA':'GYM 6:00-6:45')+' · SESIÓN '+(idx+1)+'/'+F.ses:'')+
+        (real?'':' · PERFECTO')+'</span><button data-cerrar-det>✕</button></div>';
+  function linea(nom,rep,marcable){
+    var on=hechos.indexOf(nom)>=0;
+    return '<div class="cal-det-e"><span>'+(on?'✓ ':'')+linkEj(nom)+'</span>'+
+           '<span class="rep">'+rep+'</span></div>';
+  }
+  if(idx>=0){
+    h+=[RAMPA].concat(sesionDe(fase,idx),[WHEY]).map(function(x){
+      return linea(limpiaNom(x[0]),x[1]);
+    }).join('');
+    h+='<div class="cal-det-n">Llévalo cerca del fallo · el peso da igual. '+
+       'Toca cualquier nombre para ver cómo se hace.</div>';
+  } else if(fase===0){
+    h+=DIARIO.map(function(x){ return linea(x[0],x[1]); }).join('');
+    h+='<div class="cal-det-n"><b style="color:var(--chispa)">Fase 0: no hay día obligado.</b> '+
+       'Cualquiera del pool que hagas suma — están listados abajo.</div>';
+  } else {
+    h+=DIARIO.map(function(x){ return linea(x[0],x[1]); }).join('');
+    var prox=null;
+    for(var i=1;i<=7;i++){ if(F.dias.indexOf((dow+i)%7)>=0){ prox=(dow+i)%7; break; } }
+    h+='<div class="cal-det-n">Sin sesión este día — solo lo diario. '+
+       'Próxima: <b style="color:var(--brasa)">'+DIA_NOM[prox]+'</b>. '+
+       'Si igual entrenas, suma.</div>';
+  }
+  det.innerHTML=h;
+  det.style.display='block';
+  det.querySelector('[data-cerrar-det]').onclick=function(){ calDetalle(null); };
+}
+
 document.getElementById('calPrev').onclick=function(){ calYM=ymSuma(calYM||ymStr(),-1); calendario(); };
 document.getElementById('calNext').onclick=function(){ calYM=ymSuma(calYM||ymStr(), 1); calendario(); };
 document.getElementById('calModo').onclick=function(){ calPerf=!calPerf; calendario(); };
